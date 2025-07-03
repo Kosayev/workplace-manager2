@@ -1186,9 +1186,10 @@ body {
   .sidebar {
     transform: translateX(-100%);
     width: 100%;
+    transition: transform var(--duration-normal) var(--ease-standard); /* Added transition */
   }
   
-  .sidebar.active {
+  .sidebar.active { /* This is now controlled by body.sidebar-open */
     transform: translateX(0);
   }
   
@@ -1205,11 +1206,14 @@ body {
     cursor: pointer;
     padding: var(--space-8);
     box-shadow: var(--shadow-sm);
+    transition: left var(--duration-normal) var(--ease-standard); /* Added transition */
   }
   
   .main-content {
-    margin-left: 0;
+    margin-left: 0; /* This is for desktop, but mobile will use transform */
     padding: var(--space-16);
+    transform: translateX(0); /* Default position for mobile */
+    transition: transform var(--duration-normal) var(--ease-standard); /* Added transition */
   }
   
   .dashboard-grid {
@@ -1241,6 +1245,19 @@ body {
   
   .calendar-day {
     min-height: 60px;
+  }
+
+  /* When sidebar is open on mobile */
+  body.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+
+  body.sidebar-open .main-content {
+    transform: translateX(280px); /* Shift main content by sidebar width */
+  }
+
+  body.sidebar-open .sidebar-toggle {
+    left: calc(280px + 16px); /* Move button with sidebar */
   }
 }
 

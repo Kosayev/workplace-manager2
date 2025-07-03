@@ -103,7 +103,7 @@ function getPriorityColor(id) {
 function initializeNavigation() {
   const navLinks = document.querySelectorAll('.nav-link');
   const sidebarToggle = document.getElementById('sidebar-toggle');
-  const sidebar = document.getElementById('sidebar');
+  const body = document.body; // Get the body element
 
   navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
@@ -116,13 +116,13 @@ function initializeNavigation() {
       
       // Close sidebar on navigation link click for mobile
       if (window.innerWidth <= 768) {
-        sidebar.classList.remove('active');
+        body.classList.remove('sidebar-open'); // Remove sidebar-open class from body
       }
     });
   });
 
   sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('active');
+    body.classList.toggle('sidebar-open'); // Toggle sidebar-open class on body
   });
 }
 
