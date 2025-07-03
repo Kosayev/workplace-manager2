@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>職場管理システム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>職場管理</h2>
+            <button class="sidebar-toggle" id="sidebar-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="#dashboard" class="nav-link active" data-section="dashboard">
+                <span class="nav-icon">📊</span>
+                ダッシュボード
+            </a></li>
+            <li><a href="#handovers" class="nav-link" data-section="handovers">
+                <span class="nav-icon">📝</span>
+                申し送り事項
+            </a></li>
+            <li><a href="#tasks" class="nav-link" data-section="tasks">
+                <span class="nav-icon">✅</span>
+                タスク管理
+            </a></li>
+            <li><a href="#calendar" class="nav-link" data-section="calendar">
+                <span class="nav-icon">📅</span>
+                カレンダー
+            </a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="content-section active">
+            <div class="section-header">
+                <h1>ダッシュボード</h1>
+                <button class="btn btn--primary" id="add-schedule-btn">
+                    <span>➕</span>
+                    スケジュール追加
+                </button>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="schedule-card">
+                    <div class="card-header">
+                        <h3>今日のスケジュール</h3>
+                        <span class="date-badge" id="today-date"></span>
+                    </div>
+                    <div class="schedule-list" id="today-schedule"></div>
+                </div>
+                
+                <div class="schedule-card">
+                    <div class="card-header">
+                        <h3>明日のスケジュール</h3>
+                        <span class="date-badge" id="tomorrow-date"></span>
+                    </div>
+                    <div class="schedule-list" id="tomorrow-schedule"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Handovers Section -->
+        <section id="handovers-section" class="content-section">
+            <div class="section-header">
+                <h1>申し送り事項</h1>
+                <button class="btn btn--primary" id="add-handover-btn">
+                    <span>➕</span>
+                    申し送り追加
+                </button>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab-buttons" id="handover-tabs"></div>
+                <div class="tab-content" id="handover-content"></div>
+            </div>
+        </section>
+
+        <!-- Tasks Section -->
+        <section id="tasks-section" class="content-section">
+            <div class="section-header">
+                <h1>タスク管理</h1>
+                <button class="btn btn--primary" id="add-task-btn">
+                    <span>➕</span>
+                    タスク追加
+                </button>
+            </div>
+            
+            <div class="filter-controls">
+                <select id="task-department-filter" class="form-control">
+                    <option value="">全部署</option>
+                </select>
+                <select id="task-priority-filter" class="form-control">
+                    <option value="">全優先度</option>
+                </select>
+            </div>
+            
+            <div class="tasks-grid" id="tasks-grid"></div>
+        </section>
+
+        <!-- Calendar Section -->
+        <section id="calendar-section" class="content-section">
+            <div class="section-header">
+                <h1>カレンダー</h1>
+                <div class="calendar-controls">
+                    <button class="btn btn--outline" id="prev-month">‹</button>
+                    <h2 id="current-month"></h2>
+                    <button class="btn btn--outline" id="next-month">›</button>
+                </div>
+            </div>
+            
+            <div class="calendar-grid" id="calendar-grid"></div>
+            <div class="calendar-legend" id="calendar-legend"></div>
+        </section>
+    </main>
+
+    <!-- Modal for adding/editing items -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title"></h3>
+                <button class="modal-close" id="modal-close">×</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
