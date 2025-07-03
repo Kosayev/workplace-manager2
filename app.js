@@ -114,6 +114,7 @@ function initializeNavigation() {
       navLinks.forEach(l => l.classList.remove('active'));
       link.classList.add('active');
       
+      // Close sidebar on navigation link click for mobile
       if (window.innerWidth <= 768) {
         sidebar.classList.remove('active');
       }
