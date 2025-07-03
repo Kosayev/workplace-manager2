@@ -128,15 +128,11 @@ function initializeNavigation() {
 
 function showSection(section) {
   const sections = document.querySelectorAll('.content-section');
-  sections.forEach(s => {
-    s.classList.remove('active');
-    s.style.display = 'none'; // Ensure non-active sections are hidden
-  });
+  sections.forEach(s => s.classList.remove('active'));
   
   const targetSection = document.getElementById(`${section}-section`);
   if (targetSection) {
     targetSection.classList.add('active');
-    targetSection.style.display = 'block'; // Ensure active section is shown
     currentSection = section;
     
     switch(section) {

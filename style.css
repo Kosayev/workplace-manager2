@@ -760,11 +760,11 @@ body {
 }
 
 .content-section {
-  display: none;
+  display: none !important;
 }
 
 .content-section.active {
-  display: block;
+  display: block !important;
 }
 
 .section-header {
@@ -1253,11 +1253,11 @@ body {
   }
 
   body.sidebar-open .main-content {
-    transform: translateX(100vw); /* Shift main content by full viewport width */
+    transform: translateX(280px); /* Shift main content by sidebar width */
   }
 
   body.sidebar-open .sidebar-toggle {
-    left: calc(100vw - 56px); /* Adjust button position to move with sidebar */
+    left: calc(280px + 16px); /* Move button with sidebar */
   }
 }
 
