@@ -760,11 +760,11 @@ body {
 }
 
 .content-section {
-  display: none !important;
+  display: none;
 }
 
 .content-section.active {
-  display: block !important;
+  display: block;
 }
 
 .section-header {
@@ -778,6 +778,7 @@ body {
   margin: 0;
   font-size: var(--font-size-3xl);
   color: var(--color-text);
+  text-align: center; /* Added */
 }
 
 /* Dashboard Grid */
@@ -1186,10 +1187,10 @@ body {
   .sidebar {
     transform: translateX(-100%);
     width: 100%;
-    transition: transform var(--duration-normal) var(--ease-standard); /* Added transition */
+    transition: transform var(--duration-normal) var(--ease-standard);
   }
   
-  .sidebar.active { /* This is now controlled by body.sidebar-open */
+  .sidebar.active {
     transform: translateX(0);
   }
   
@@ -1206,14 +1207,14 @@ body {
     cursor: pointer;
     padding: var(--space-8);
     box-shadow: var(--shadow-sm);
-    transition: left var(--duration-normal) var(--ease-standard); /* Added transition */
+    transition: left var(--duration-normal) var(--ease-standard);
   }
   
   .main-content {
-    margin-left: 0; /* This is for desktop, but mobile will use transform */
+    margin-left: 0;
     padding: var(--space-16);
-    transform: translateX(0); /* Default position for mobile */
-    transition: transform var(--duration-normal) var(--ease-standard); /* Added transition */
+    transform: translateX(0);
+    transition: transform var(--duration-normal) var(--ease-standard);
   }
   
   .dashboard-grid {
