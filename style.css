@@ -1184,12 +1184,12 @@ body {
 /* Responsive Design */
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
+    transform: translateX(100%); /* Hidden by default on mobile */
     width: 100%;
-    transition: transform var(--duration-normal) var(--ease-standard); /* Added transition */
+    transition: transform var(--duration-normal) var(--ease-standard);
   }
   
-  .sidebar.active { /* This is now controlled by body.sidebar-open */
+  .sidebar.active {
     transform: translateX(0);
   }
   
@@ -1197,7 +1197,7 @@ body {
     display: flex;
     position: fixed;
     top: 16px;
-    left: 16px;
+    right: 16px; /* Changed from left */
     z-index: 1100;
     flex-direction: column;
     background: var(--color-surface);
@@ -1206,45 +1206,14 @@ body {
     cursor: pointer;
     padding: var(--space-8);
     box-shadow: var(--shadow-sm);
-    transition: left var(--duration-normal) var(--ease-standard); /* Added transition */
+    transition: right var(--duration-normal) var(--ease-standard);
   }
   
   .main-content {
-    margin-left: 0; /* This is for desktop, but mobile will use transform */
+    margin-right: 0; /* Changed from margin-left */
     padding: var(--space-16);
-    transform: translateX(0); /* Default position for mobile */
-    transition: transform var(--duration-normal) var(--ease-standard); /* Added transition */
-  }
-  
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    gap: var(--space-16);
-    align-items: flex-start;
-  }
-  
-  .tab-buttons {
-    flex-direction: column;
-  }
-  
-  .filter-controls {
-    flex-direction: column;
-  }
-  
-  .tasks-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .calendar-controls {
-    flex-direction: column;
-    gap: var(--space-12);
-  }
-  
-  .calendar-day {
-    min-height: 60px;
+    transform: translateX(0);
+    transition: transform var(--duration-normal) var(--ease-standard);
   }
 
   /* When sidebar is open on mobile */
@@ -1253,11 +1222,11 @@ body {
   }
 
   body.sidebar-open .main-content {
-    transform: translateX(280px); /* Shift main content by sidebar width */
+    transform: translateX(-280px); /* Shift main content to the left by sidebar width */
   }
 
   body.sidebar-open .sidebar-toggle {
-    left: calc(280px + 16px); /* Move button with sidebar */
+    right: calc(280px + 16px); /* Move button with sidebar */
   }
 }
 
