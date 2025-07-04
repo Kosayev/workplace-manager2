@@ -99,6 +99,15 @@ function getPriorityColor(id) {
   return appData.priorities.find(p => p.id === id)?.color || '#666';
 }
 
+function getHandoverStatusName(status) {
+  switch (status) {
+    case 'pending': return '未対応';
+    case 'in-progress': return '対応中';
+    case 'completed': return '完了';
+    default: return status;
+  }
+}
+
 // Navigation Functions
 function initializeNavigation() {
   const navLinks = document.querySelectorAll('.nav-link');
@@ -251,7 +260,12 @@ function renderHandoverContent() {
       getPriorityName(h.priority).toLowerCase().includes(searchTerm)
     );
   }
-  
+
+  const statusFilter = document.getElementById('handover-status-filter').value;
+  if (statusFilter) {
+    handovers = handovers.filter(h => h.status === statusFilter);
+  }
+
   if (handovers.length === 0) {
     contentContainer.innerHTML = '<div class="empty-state">申し送り事項がありません</div>';
     return;
@@ -266,6 +280,9 @@ function renderHandoverContent() {
         <div class="handover-title">${handover.title}</div>
         <div class="handover-description">${handover.description}</div>
         <div class="handover-timestamp">${formatDateTime(handover.timestamp)}</div>
+      </div>
+      <div class="handover-status status--${handover.status}">
+        ${getHandoverStatusName(handover.status)}
       </div>
       <button class="delete-btn" data-id="${handover.id}">×</button>
     </div>
@@ -607,6 +624,11 @@ function showHandoverModal() {
       <div class="form-group"><label class="form-label">タイトル</label><input type="text" class="form-control" name="title" required></div>
       <div class="form-group"><label class="form-label">部署</label><select class="form-control" name="department" required>${appData.departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">優先度</label><select class="form-control" name="priority" required>${appData.priorities.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">ステータス</label><select class="form-control" name="status">
+        <option value="pending" selected>未対応</option>
+        <option value="in-progress">対応中</option>
+        <option value="completed">完了</option>
+      </select></div>
       <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="4" required></textarea></div>
       <div class="modal-buttons"><button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button><button type="submit" class="btn btn--primary">追加</button></div>
     </form>
@@ -679,7 +701,7 @@ async function addHandover(event) {
     description: formData.get('description'),
     priority: formData.get('priority'),
     timestamp: new Date().toISOString(),
-    status: 'pending'
+    status: formData.get('status') || 'pending' // Add status, default to 'pending'
   };
   
   const { data, error } = await supabase.from('handovers').insert([newHandover]).select();
