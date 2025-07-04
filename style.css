@@ -1070,11 +1070,12 @@ body {
 .calendar-day {
   background-color: var(--color-surface);
   padding: var(--space-12);
-  min-height: 100px;
+  height: 100px;
   display: flex;
   flex-direction: column;
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-standard);
+  overflow: hidden;
 }
 
 .calendar-day:hover {
