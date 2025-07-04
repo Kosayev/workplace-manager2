@@ -421,6 +421,16 @@ function renderCalendarGrid() {
   }
   
   container.innerHTML = html;
+
+  // Add event listeners for calendar days
+  container.querySelectorAll('.calendar-day').forEach(dayElement => {
+    dayElement.addEventListener('click', () => {
+      const dateStr = dayElement.dataset.date;
+      if (dateStr) {
+        showDailyScheduleModal(dateStr);
+      }
+    });
+  });
 }
 
 function renderCalendarLegend() {
@@ -431,6 +441,31 @@ function renderCalendarLegend() {
       <span>${dept.name}</span>
     </div>
   `).join('');
+}
+
+// Daily Schedule Modal Function
+function showDailyScheduleModal(dateStr) {
+  const schedulesForDate = appData.schedules.filter(s => s.date === dateStr);
+  let modalContent = '';
+
+  if (schedulesForDate.length === 0) {
+    modalContent = '<div class="empty-state">この日のスケジュールはありません</div>';
+  } else {
+    modalContent = schedulesForDate.map(schedule => `
+      <div class="schedule-item">
+        <div class="schedule-time">${formatTime(schedule.time)}</div>
+        <div class="schedule-details">
+          <div class="schedule-title">${schedule.title}</div>
+          <div class="schedule-description">${schedule.description}</div>
+          <div class="schedule-department" style="background-color: ${getDepartmentColor(schedule.department)}">
+            ${getDepartmentName(schedule.department)}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  showModal(`${formatDate(dateStr)}のスケジュール`, modalContent);
 }
 
 // Modal Functions
