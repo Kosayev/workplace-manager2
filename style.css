@@ -658,11 +658,16 @@ select.form-control {
 
 /* Layout Structure */
 body {
-  display: flex;
   min-height: 100vh;
   margin: 0;
   font-family: var(--font-family-base);
   background-color: var(--color-background);
+}
+
+@media (min-width: 769px) {
+  body {
+    display: flex;
+  }
 }
 
 /* Sidebar Navigation */
