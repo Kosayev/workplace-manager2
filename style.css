@@ -753,10 +753,16 @@ body {
 /* Main Content */
 .main-content {
   flex: 1;
-  margin-left: 280px;
   padding: var(--space-32);
   background-color: var(--color-background);
   min-height: 100vh;
+  transition: margin-left var(--duration-normal) var(--ease-standard);
+}
+
+@media (min-width: 769px) {
+  .main-content {
+    margin-left: 280px;
+  }
 }
 
 .content-section {
