@@ -360,31 +360,6 @@ async function toggleHandoverStatus(handoverId, currentStatus) {
   }
 }
 
-async function toggleHandoverStatus(handoverId, currentStatus) {
-  const nextStatusMap = {
-    'pending': 'in-progress',
-    'in-progress': 'completed',
-    'completed': 'pending'
-  };
-  const newStatus = nextStatusMap[currentStatus];
-
-  const { error } = await supabase
-    .from('handovers')
-    .update({ status: newStatus })
-    .eq('id', handoverId);
-
-  if (error) {
-    console.error('Error updating handover status:', error);
-    alert('申し送り事項のステータス更新に失敗しました。');
-  } else {
-    const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
-    if (handover) {
-      handover.status = newStatus;
-    }
-    renderHandoverContent();
-  }
-}
-
 // Tasks Functions
 function renderTasks() {
   renderTaskFilters();
@@ -477,16 +452,21 @@ async function toggleTaskCompletion(taskId) {
   const task = appData.tasks.find(t => t.id === taskIdNum);
   if (task) {
     const newStatus = !task.completed;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('tasks')
       .update({ completed: newStatus })
-      .eq('id', taskIdNum);
+      .eq('id', taskIdNum)
+      .select();
 
     if (error) {
       console.error('Error updating task:', error);
       alert('タスクの状態更新に失敗しました。');
     } else {
-      task.completed = newStatus;
+      const updatedTask = data[0];
+      const index = appData.tasks.findIndex(t => t.id === updatedTask.id);
+      if (index !== -1) {
+        appData.tasks[index] = updatedTask;
+      }
       renderTasksGrid();
     }
   }
