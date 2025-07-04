@@ -187,8 +187,18 @@ function renderScheduleList(containerId, date) {
           ${getDepartmentName(schedule.department)}
         </div>
       </div>
+      <button class="delete-btn" data-id="${schedule.id}">×</button>
     </div>
   `).join('');
+
+  container.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const scheduleId = e.target.dataset.id;
+      if (confirm('このスケジュールを削除しますか？')) {
+        deleteSchedule(scheduleId);
+      }
+    });
+  });
 }
 
 // Handovers Functions
@@ -233,8 +243,18 @@ function renderHandoverContent() {
         <div class="handover-description">${handover.description}</div>
         <div class="handover-timestamp">${formatDateTime(handover.timestamp)}</div>
       </div>
+      <button class="delete-btn" data-id="${handover.id}">×</button>
     </div>
   `).join('');
+
+  contentContainer.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const handoverId = e.target.dataset.id;
+      if (confirm('この申し送り事項を削除しますか？')) {
+        deleteHandover(handoverId);
+      }
+    });
+  });
 }
 
 // Tasks Functions
@@ -293,12 +313,22 @@ function renderTasksGrid() {
           ${getDepartmentName(task.department)}
         </div>
       </div>
+      <button class="delete-btn" data-id="${task.id}">×</button>
     </div>
   `).join('');
 
   // Add event listeners for checkboxes after rendering
   container.querySelectorAll('.task-checkbox').forEach(checkbox => {
       checkbox.addEventListener('change', (e) => toggleTaskCompletion(e.target.dataset.taskId));
+  });
+
+  container.querySelectorAll('.delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const taskId = e.target.dataset.id;
+      if (confirm('このタスクを削除しますか？')) {
+        deleteTask(taskId);
+      }
+    });
   });
 }
 
@@ -491,6 +521,19 @@ async function addSchedule(event) {
   }
 }
 
+async function deleteSchedule(scheduleId) {
+  const { error } = await supabase.from('schedules').delete().eq('id', scheduleId);
+
+  if (error) {
+    console.error('Error deleting schedule:', error);
+    alert('スケジュールの削除に失敗しました。');
+  } else {
+    appData.schedules = appData.schedules.filter(s => s.id !== parseInt(scheduleId));
+    if (currentSection === 'dashboard') renderDashboard();
+    else if (currentSection === 'calendar') renderCalendar();
+  }
+}
+
 async function addHandover(event) {
   event.preventDefault();
   const formData = new FormData(event.target);
@@ -511,6 +554,18 @@ async function addHandover(event) {
   } else {
     appData.handovers.push(data[0]);
     document.getElementById('modal').classList.remove('active');
+    if (currentSection === 'handovers') renderHandovers();
+  }
+}
+
+async function deleteHandover(handoverId) {
+  const { error } = await supabase.from('handovers').delete().eq('id', handoverId);
+
+  if (error) {
+    console.error('Error deleting handover:', error);
+    alert('申し送り事項の削除に失敗しました。');
+  } else {
+    appData.handovers = appData.handovers.filter(h => h.id !== parseInt(handoverId));
     if (currentSection === 'handovers') renderHandovers();
   }
 }
@@ -536,6 +591,18 @@ async function addTask(event) {
   } else {
     appData.tasks.push(data[0]);
     document.getElementById('modal').classList.remove('active');
+    if (currentSection === 'tasks') renderTasks();
+  }
+}
+
+async function deleteTask(taskId) {
+  const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+
+  if (error) {
+    console.error('Error deleting task:', error);
+    alert('タスクの削除に失敗しました。');
+  } else {
+    appData.tasks = appData.tasks.filter(t => t.id !== parseInt(taskId));
     if (currentSection === 'tasks') renderTasks();
   }
 }
