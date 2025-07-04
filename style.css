@@ -1253,10 +1253,6 @@ body {
     transform: translateX(0);
   }
 
-  body.sidebar-open .main-content {
-    transform: translateX(280px); /* Shift main content by sidebar width */
-  }
-
   body.sidebar-open .sidebar-toggle {
     left: calc(280px + 16px); /* Move button with sidebar */
   }
