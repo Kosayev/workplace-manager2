@@ -940,13 +940,21 @@ body {
 }
 
 .handover-item {
+  position: relative; /* For absolute positioning of delete button */
   display: flex;
   align-items: flex-start;
   padding: var(--space-16);
+  padding-bottom: var(--space-32); /* Add padding for the button */
   border-radius: var(--radius-base);
   border: 1px solid var(--color-card-border);
   margin-bottom: var(--space-12);
   transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.handover-actions {
+  position: absolute;
+  bottom: var(--space-12);
+  right: var(--space-12);
 }
 
 .handover-item:hover {
