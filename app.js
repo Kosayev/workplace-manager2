@@ -352,6 +352,40 @@ async function toggleHandoverStatus(handoverId, currentStatus) {
   }
 }
 
+  contentContainer.querySelectorAll('.handover-status').forEach(statusElement => {
+    statusElement.addEventListener('click', (e) => {
+      const handoverId = e.target.dataset.id;
+      const currentStatus = e.target.dataset.status;
+      toggleHandoverStatus(handoverId, currentStatus);
+    });
+  });
+}
+
+async function toggleHandoverStatus(handoverId, currentStatus) {
+  const nextStatusMap = {
+    'pending': 'in-progress',
+    'in-progress': 'completed',
+    'completed': 'pending'
+  };
+  const newStatus = nextStatusMap[currentStatus];
+
+  const { error } = await supabase
+    .from('handovers')
+    .update({ status: newStatus })
+    .eq('id', handoverId);
+
+  if (error) {
+    console.error('Error updating handover status:', error);
+    alert('申し送り事項のステータス更新に失敗しました。');
+  } else {
+    const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
+    if (handover) {
+      handover.status = newStatus;
+    }
+    renderHandoverContent();
+  }
+}
+
 async function toggleHandoverStatus(handoverId, currentStatus) {
   const nextStatusMap = {
     'pending': 'in-progress',
