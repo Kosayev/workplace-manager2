@@ -241,8 +241,13 @@ function renderHandoverTabs() {
   `).join('');
   
   tabsContainer.querySelectorAll('.tab-button').forEach(button => {
-    button.addEventListener('click', () => {
-      activeHandoverDept = button.dataset.department;
+    button.addEventListener('click', (e) => {
+      // Remove active class from all buttons
+      tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      // Add active class to the clicked button
+      e.target.classList.add('active');
+
+      activeHandoverDept = e.target.dataset.department;
       renderHandoverContent(); // Only re-render content on tab change
     });
   });
