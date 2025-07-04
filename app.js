@@ -461,11 +461,76 @@ function showDailyScheduleModal(dateStr) {
             ${getDepartmentName(schedule.department)}
           </div>
         </div>
+        <button class="edit-btn" data-id="${schedule.id}">編集</button>
       </div>
     `).join('');
   }
 
   showModal(`${formatDate(dateStr)}のスケジュール`, modalContent);
+
+  // Add event listeners for edit buttons in the daily schedule modal
+  document.querySelectorAll('#modal-body .edit-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const scheduleId = e.target.dataset.id;
+      showEditScheduleModal(scheduleId);
+    });
+  });
+}
+
+async function showEditScheduleModal(scheduleId) {
+  const schedule = appData.schedules.find(s => s.id === parseInt(scheduleId));
+  if (!schedule) return;
+
+  const content = `
+    <form class="modal-form" id="edit-schedule-form">
+      <input type="hidden" name="id" value="${schedule.id}">
+      <div class="form-group"><label class="form-label">タイトル</label><input type="text" class="form-control" name="title" value="${schedule.title}" required></div>
+      <div class="form-group"><label class="form-label">部署</label><select class="form-control" name="department" required>${appData.departments.map(d => `<option value="${d.id}" ${schedule.department === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">日付</label><input type="date" class="form-control" name="date" value="${schedule.date}" required></div>
+      <div class="form-group"><label class="form-label">時間</label><input type="time" class="form-control" name="time" value="${schedule.time}" required></div>
+      <div class="form-group"><label class="form-label">説明</label><textarea class="form-control" name="description" rows="3">${schedule.description || ''}</textarea></div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button>
+        <button type="button" class="btn btn--danger" onclick="deleteSchedule(${schedule.id}); document.getElementById('modal').classList.remove('active');">削除</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  `;
+  showModal('スケジュール編集', content);
+  document.getElementById('edit-schedule-form').addEventListener('submit', editSchedule);
+}
+
+async function editSchedule(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const updatedSchedule = {
+    id: parseInt(formData.get('id')),
+    title: formData.get('title'),
+    department: formData.get('department'),
+    date: formData.get('date'),
+    time: formData.get('time'),
+    description: formData.get('description') || '',
+  };
+
+  const { data, error } = await supabase
+    .from('schedules')
+    .update(updatedSchedule)
+    .eq('id', updatedSchedule.id)
+    .select();
+
+  if (error) {
+    console.error('Error updating schedule:', error);
+    alert('スケジュールの更新に失敗しました。');
+  } else {
+    // Update appData
+    const index = appData.schedules.findIndex(s => s.id === updatedSchedule.id);
+    if (index !== -1) {
+      appData.schedules[index] = data[0];
+    }
+    document.getElementById('modal').classList.remove('active');
+    if (currentSection === 'dashboard') renderDashboard();
+    else if (currentSection === 'calendar') renderCalendar();
+  }
 }
 
 // Modal Functions
