@@ -164,13 +164,26 @@ function renderDashboard() {
   document.getElementById('today-date').textContent = formatDate(todayStr);
   document.getElementById('tomorrow-date').textContent = formatDate(tomorrowStr);
   
-  renderScheduleList('today-schedule', todayStr);
-  renderScheduleList('tomorrow-schedule', tomorrowStr);
+  const searchInput = document.getElementById('dashboard-search');
+  searchInput.addEventListener('input', renderDashboard);
+
+  const searchTerm = searchInput.value.toLowerCase();
+
+  renderScheduleList('today-schedule', todayStr, searchTerm);
+  renderScheduleList('tomorrow-schedule', tomorrowStr, searchTerm);
 }
 
-function renderScheduleList(containerId, date) {
+function renderScheduleList(containerId, date, searchTerm = '') {
   const container = document.getElementById(containerId);
-  const schedules = appData.schedules.filter(s => s.date === date);
+  let schedules = appData.schedules.filter(s => s.date === date);
+  
+  if (searchTerm) {
+    schedules = schedules.filter(s => 
+      s.title.toLowerCase().includes(searchTerm) ||
+      s.description.toLowerCase().includes(searchTerm) ||
+      getDepartmentName(s.department).toLowerCase().includes(searchTerm)
+    );
+  }
   
   if (schedules.length === 0) {
     container.innerHTML = '<div class="empty-state">スケジュールがありません</div>';
@@ -204,6 +217,8 @@ function renderScheduleList(containerId, date) {
 // Handovers Functions
 function renderHandovers() {
   renderHandoverTabs();
+  const searchInput = document.getElementById('handover-search');
+  searchInput.addEventListener('input', renderHandoverContent);
   renderHandoverContent();
 }
 
@@ -219,14 +234,23 @@ function renderHandoverTabs() {
   tabsContainer.querySelectorAll('.tab-button').forEach(button => {
     button.addEventListener('click', () => {
       activeHandoverDept = button.dataset.department;
-      renderHandovers();
+      renderHandoverContent(); // Only re-render content on tab change
     });
   });
 }
 
 function renderHandoverContent() {
   const contentContainer = document.getElementById('handover-content');
-  const handovers = appData.handovers.filter(h => h.department === activeHandoverDept);
+  let handovers = appData.handovers.filter(h => h.department === activeHandoverDept);
+  
+  const searchTerm = document.getElementById('handover-search').value.toLowerCase();
+  if (searchTerm) {
+    handovers = handovers.filter(h => 
+      h.title.toLowerCase().includes(searchTerm) ||
+      h.description.toLowerCase().includes(searchTerm) ||
+      getPriorityName(h.priority).toLowerCase().includes(searchTerm)
+    );
+  }
   
   if (handovers.length === 0) {
     contentContainer.innerHTML = '<div class="empty-state">申し送り事項がありません</div>';
@@ -260,6 +284,8 @@ function renderHandoverContent() {
 // Tasks Functions
 function renderTasks() {
   renderTaskFilters();
+  const searchInput = document.getElementById('task-search');
+  searchInput.addEventListener('input', renderTasksGrid);
   renderTasksGrid();
 }
 
@@ -290,6 +316,16 @@ function renderTasksGrid() {
   
   if (priorityFilter) {
     filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter);
+  }
+
+  const searchTerm = document.getElementById('task-search').value.toLowerCase();
+  if (searchTerm) {
+    filteredTasks = filteredTasks.filter(t => 
+      t.title.toLowerCase().includes(searchTerm) ||
+      t.description.toLowerCase().includes(searchTerm) ||
+      getDepartmentName(t.department).toLowerCase().includes(searchTerm) ||
+      getPriorityName(t.priority).toLowerCase().includes(searchTerm)
+    );
   }
   
   if (filteredTasks.length === 0) {

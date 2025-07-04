@@ -785,6 +785,16 @@ body {
   margin-bottom: var(--space-32);
 }
 
+.header-controls {
+  display: flex;
+  gap: var(--space-16);
+  align-items: center;
+}
+
+.search-input {
+  width: 200px; /* Adjust as needed */
+}
+
 .section-header h1 {
   margin: 0;
   font-size: var(--font-size-3xl);
