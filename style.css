@@ -940,11 +940,9 @@ body {
 }
 
 .handover-item {
-  position: relative; /* For absolute positioning of delete button */
   display: flex;
   align-items: flex-start;
   padding: var(--space-16);
-  padding-bottom: var(--space-32); /* Add padding for the button */
   border-radius: var(--radius-base);
   border: 1px solid var(--color-card-border);
   margin-bottom: var(--space-12);
@@ -998,12 +996,6 @@ body {
 .status--pending { background-color: #FFC107; } /* Warning color */
 .status--in-progress { background-color: #17A2B8; } /* Info color */
 .status--completed { background-color: #28A745; } /* Success color */
-
-.handover-actions {
-  position: absolute;
-  bottom: var(--space-12);
-  right: var(--space-12);
-}
 
 /* Filter Controls */
 .filter-controls {
