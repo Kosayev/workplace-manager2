@@ -1252,7 +1252,6 @@ body {
   }
   
   .calendar-controls {
-    flex-direction: column;
     gap: var(--space-12);
   }
   
