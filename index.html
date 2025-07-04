@@ -25,14 +25,20 @@
             <li><a href="#handovers" class="nav-link" data-section="handovers">
                 <span class="nav-icon">📝</span>
                 申し送り事項
+                <span class="unread-badge" id="handovers-unread-badge"></span>
             </a></li>
             <li><a href="#tasks" class="nav-link" data-section="tasks">
                 <span class="nav-icon">✅</span>
                 タスク管理
+                <span class="unread-badge" id="tasks-unread-badge"></span>
             </a></li>
             <li><a href="#calendar" class="nav-link" data-section="calendar">
                 <span class="nav-icon">📅</span>
                 カレンダー
+            </a></li>
+            <li><a href="#settings" class="nav-link" data-section="settings">
+                <span class="nav-icon">⚙️</span>
+                設定
             </a></li>
         </ul>
     </nav>
@@ -140,6 +146,37 @@
             
             <div class="calendar-grid" id="calendar-grid"></div>
             <div class="calendar-legend" id="calendar-legend"></div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="content-section">
+            <div class="section-header">
+                <h1>設定</h1>
+            </div>
+
+            <div class="settings-grid">
+                <!-- Department Settings -->
+                <div class="settings-card">
+                    <h3>部署の管理</h3>
+                    <div id="department-settings-content"></div>
+                    <form id="add-department-form" class="settings-form">
+                        <input type="text" name="name" class="form-control" placeholder="新しい部署名" required>
+                        <input type="color" name="color" value="#4A90E2">
+                        <button type="submit" class="btn btn--primary">追加</button>
+                    </form>
+                </div>
+
+                <!-- Priority Settings -->
+                <div class="settings-card">
+                    <h3>優先度の管理</h3>
+                    <div id="priority-settings-content"></div>
+                    <form id="add-priority-form" class="settings-form">
+                        <input type="text" name="name" class="form-control" placeholder="新しい優先度名" required>
+                        <input type="color" name="color" value="#FFC107">
+                        <button type="submit" class="btn btn--primary">追加</button>
+                    </form>
+                </div>
+            </div>
         </section>
     </main>
 

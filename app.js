@@ -1,4 +1,5 @@
 
+"""
 // --- Supabase Client Initialization ---
 const SUPABASE_URL = 'https://fpykdcvcswamsiawtibh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZweWtkY3Zjc3dhbXNpYXd0aWJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTQxNjUsImV4cCI6MjA2NzA5MDE2NX0.G8VYMDmNSdXeLoDU1PBihAq7ybWhGi_YhRWvjRgsb0U';
@@ -51,9 +52,50 @@ async function fetchData() {
         activeHandoverDept = appData.departments[0].id;
     }
 
+    updateUnreadCounts(); // <-- Add this line
+
   } catch (error) {
     console.error('Error fetching data:', error);
     alert('データの読み込みに失敗しました。');
+  }
+}
+
+// --- Unread Notification Functions ---
+function updateUnreadCounts() {
+  const lastViewedHandovers = localStorage.getItem('lastViewedHandovers');
+  const unreadHandovers = lastViewedHandovers 
+    ? appData.handovers.filter(h => new Date(h.timestamp) > new Date(lastViewedHandovers)).length
+    : appData.handovers.length;
+  
+  updateBadge('handovers-unread-badge', unreadHandovers);
+
+  const lastViewedTasks = localStorage.getItem('lastViewedTasks');
+  const unreadTasks = lastViewedTasks
+    ? appData.tasks.filter(t => new Date(t.created_at) > new Date(lastViewedTasks)).length
+    : appData.tasks.length;
+    
+  updateBadge('tasks-unread-badge', unreadTasks);
+}
+
+function updateBadge(badgeId, count) {
+  const badge = document.getElementById(badgeId);
+  if (badge) {
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+function markAsRead(section) {
+  if (section === 'handovers') {
+    localStorage.setItem('lastViewedHandovers', new Date().toISOString());
+    updateBadge('handovers-unread-badge', 0);
+  } else if (section === 'tasks') {
+    localStorage.setItem('lastViewedTasks', new Date().toISOString());
+    updateBadge('tasks-unread-badge', 0);
   }
 }
 
@@ -144,6 +186,8 @@ function showSection(section) {
     targetSection.classList.add('active');
     currentSection = section;
     
+    markAsRead(section); // <-- Add this line
+
     switch(section) {
       case 'dashboard':
         renderDashboard();
@@ -156,6 +200,9 @@ function showSection(section) {
         break;
       case 'calendar':
         renderCalendar();
+        break;
+      case 'settings':
+        renderSettings();
         break;
     }
   }
@@ -838,6 +885,7 @@ async function addHandover(event) {
     appData.handovers.push(data[0]);
     document.getElementById('modal').classList.remove('active');
     if (currentSection === 'handovers') renderHandovers();
+    updateUnreadCounts(); // <-- Add this line
   }
 }
 
@@ -875,6 +923,7 @@ async function addTask(event) {
     appData.tasks.push(data[0]);
     document.getElementById('modal').classList.remove('active');
     if (currentSection === 'tasks') renderTasks();
+    updateUnreadCounts(); // <-- Add this line
   }
 }
 
@@ -890,6 +939,89 @@ async function deleteTask(taskId) {
   }
 }
 
+// Settings Functions
+function renderSettings() {
+    renderDepartmentSettings();
+    renderPrioritySettings();
+}
+
+function renderDepartmentSettings() {
+    const container = document.getElementById('department-settings-content');
+    container.innerHTML = appData.departments.map(dept => `
+        <div class="setting-item">
+            <div class="flex items-center">
+                <div class="setting-item-color-swatch" style="background-color: ${dept.color}"></div>
+                <span>${dept.name}</span>
+            </div>
+            <button class="delete-btn" data-id="${dept.id}" data-type="department">×</button>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (confirm('この部署を削除しますか？関連するデータも全て削除されます。')) {
+                deleteSetting(id, 'departments');
+            }
+        });
+    });
+}
+
+function renderPrioritySettings() {
+    const container = document.getElementById('priority-settings-content');
+    container.innerHTML = appData.priorities.map(prio => `
+        <div class="setting-item">
+            <div class="flex items-center">
+                <div class="setting-item-color-swatch" style="background-color: ${prio.color}"></div>
+                <span>${prio.name}</span>
+            </div>
+            <button class="delete-btn" data-id="${prio.id}" data-type="priority">×</button>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (confirm('この優先度を削除しますか？関連するデータも全て削除されます。')) {
+                deleteSetting(id, 'priorities');
+            }
+        });
+    });
+}
+
+async function addSetting(event, type) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const name = formData.get('name');
+    const color = formData.get('color');
+
+    const { data, error } = await supabase.from(type).insert([{ name, color }]).select();
+
+    if (error) {
+        console.error(`Error adding ${type}:`, error);
+        alert(`${type}の追加に失敗しました。`);
+    } else {
+        appData[type].push(data[0]);
+        form.reset();
+        if (type === 'departments') renderDepartmentSettings();
+        if (type === 'priorities') renderPrioritySettings();
+    }
+}
+
+async function deleteSetting(id, type) {
+    const { error } = await supabase.from(type).delete().eq('id', id);
+
+    if (error) {
+        console.error(`Error deleting ${type}:`, error);
+        alert(`${type}の削除に失敗しました。`);
+    } else {
+        appData[type] = appData[type].filter(item => item.id !== parseInt(id));
+        if (type === 'departments') renderDepartmentSettings();
+        if (type === 'priorities') renderPrioritySettings();
+    }
+}
+
 // Initialize Application
 async function initializeApp() {
   initializeNavigation();
@@ -898,6 +1030,8 @@ async function initializeApp() {
   document.getElementById('add-schedule-btn').addEventListener('click', showScheduleModal);
   document.getElementById('add-handover-btn').addEventListener('click', showHandoverModal);
   document.getElementById('add-task-btn').addEventListener('click', showTaskModal);
+  document.getElementById('add-department-form').addEventListener('submit', (e) => addSetting(e, 'departments'));
+  document.getElementById('add-priority-form').addEventListener('submit', (e) => addSetting(e, 'priorities'));
   
   await fetchData();
   
@@ -905,3 +1039,4 @@ async function initializeApp() {
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);
+""
