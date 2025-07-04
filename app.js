@@ -304,6 +304,7 @@ function renderHandoverContent() {
         ${getHandoverStatusName(handover.status)}
       </div>
       <div class="handover-actions">
+        <button class="edit-btn" data-id="${handover.id}">編集</button>
         <button class="delete-btn" data-id="${handover.id}">×</button>
       </div>
     </div>
@@ -315,6 +316,13 @@ function renderHandoverContent() {
       if (confirm('この申し送り事項を削除しますか？')) {
         deleteHandover(handoverId);
       }
+    });
+  });
+
+  contentContainer.querySelectorAll('.edit-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const handoverId = e.target.dataset.id;
+      showEditHandoverModal(handoverId);
     });
   });
 
@@ -714,6 +722,64 @@ function showHandoverModal() {
   `;
   showModal('申し送り追加', content);
   document.getElementById('add-handover-form').addEventListener('submit', addHandover);
+}
+
+async function showEditHandoverModal(handoverId) {
+  const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
+  if (!handover) return;
+
+  const content = `
+    <form class="modal-form" id="edit-handover-form">
+      <input type="hidden" name="id" value="${handover.id}">
+      <div class="form-group"><label class="form-label">タイトル</label><input type="text" class="form-control" name="title" value="${handover.title}" required></div>
+      <div class="form-group"><label class="form-label">部署</label><select class="form-control" name="department" required>${appData.departments.map(d => `<option value="${d.id}" ${handover.department === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">優先度</label><select class="form-control" name="priority" required>${appData.priorities.map(p => `<option value="${p.id}" ${handover.priority === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">ステータス</label><select class="form-control" name="status">
+        <option value="pending" ${handover.status === 'pending' ? 'selected' : ''}>未対応</option>
+        <option value="in-progress" ${handover.status === 'in-progress' ? 'selected' : ''}>対応中</option>
+        <option value="completed" ${handover.status === 'completed' ? 'selected' : ''}>完了</option>
+      </select></div>
+      <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="4" required>${handover.description}</textarea></div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button>
+        <button type="button" class="btn btn--danger" onclick="deleteHandover(${handover.id}); document.getElementById('modal').classList.remove('active');">削除</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  `;
+  showModal('申し送り編集', content);
+  document.getElementById('edit-handover-form').addEventListener('submit', editHandover);
+}
+
+async function editHandover(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const updatedHandover = {
+    id: parseInt(formData.get('id')),
+    title: formData.get('title'),
+    department: formData.get('department'),
+    priority: formData.get('priority'),
+    status: formData.get('status'),
+    description: formData.get('description'),
+  };
+
+  const { data, error } = await supabase
+    .from('handovers')
+    .update(updatedHandover)
+    .eq('id', updatedHandover.id)
+    .select();
+
+  if (error) {
+    console.error('Error updating handover:', error);
+    alert('申し送りの更新に失敗しました。');
+  } else {
+    const index = appData.handovers.findIndex(h => h.id === updatedHandover.id);
+    if (index !== -1) {
+      appData.handovers[index] = data[0];
+    }
+    document.getElementById('modal').classList.remove('active');
+    renderHandovers();
+  }
 }
 
 function showTaskModal() {
