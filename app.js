@@ -157,6 +157,9 @@ function showSection(section) {
       case 'calendar':
         renderCalendar();
         break;
+      case 'settings':
+        renderSettings();
+        break;
     }
   }
 }
@@ -888,6 +891,93 @@ async function deleteTask(taskId) {
     appData.tasks = appData.tasks.filter(t => t.id !== parseInt(taskId));
     if (currentSection === 'tasks') renderTasks();
   }
+}
+
+// Settings Functions
+function renderSettings() {
+    renderDepartmentSettings();
+    renderPrioritySettings();
+
+    // Add event listeners for forms after rendering
+    document.getElementById('add-department-form').addEventListener('submit', (e) => addSetting(e, 'departments'));
+    document.getElementById('add-priority-form').addEventListener('submit', (e) => addSetting(e, 'priorities'));
+}
+
+function renderDepartmentSettings() {
+    const container = document.getElementById('department-settings-content');
+    container.innerHTML = appData.departments.map(dept => `
+        <div class="setting-item">
+            <div class="flex items-center">
+                <div class="setting-item-color-swatch" style="background-color: ${dept.color}"></div>
+                <span>${dept.name}</span>
+            </div>
+            <button class="delete-btn" data-id="${dept.id}" data-type="department">×</button>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (confirm('この部署を削除しますか？関連するデータも全て削除されます。')) {
+                deleteSetting(id, 'departments');
+            }
+        });
+    });
+}
+
+function renderPrioritySettings() {
+    const container = document.getElementById('priority-settings-content');
+    container.innerHTML = appData.priorities.map(prio => `
+        <div class="setting-item">
+            <div class="flex items-center">
+                <div class="setting-item-color-swatch" style="background-color: ${prio.color}"></div>
+                <span>${prio.name}</span>
+            </div>
+            <button class="delete-btn" data-id="${prio.id}" data-type="priority">×</button>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (confirm('この優先度を削除しますか？関連するデータも全て削除されます。')) {
+                deleteSetting(id, 'priorities');
+            }
+        });
+    });
+}
+
+async function addSetting(event, type) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const name = formData.get('name');
+    const color = formData.get('color');
+
+    const { data, error } = await supabase.from(type).insert([{ name, color }]).select();
+
+    if (error) {
+        console.error(`Error adding ${type}:`, error);
+        alert(`${type}の追加に失敗しました。`);
+    } else {
+        appData[type].push(data[0]);
+        form.reset();
+        if (type === 'departments') renderDepartmentSettings();
+        if (type === 'priorities') renderPrioritySettings();
+    }
+}
+
+async function deleteSetting(id, type) {
+    const { error } = await supabase.from(type).delete().eq('id', id);
+
+    if (error) {
+        console.error(`Error deleting ${type}:`, error);
+        alert(`${type}の削除に失敗しました。`);
+    } else {
+        appData[type] = appData[type].filter(item => item.id !== parseInt(id));
+        if (type === 'departments') renderDepartmentSettings();
+        if (type === 'priorities') renderPrioritySettings();
+    }
 }
 
 // Initialize Application
