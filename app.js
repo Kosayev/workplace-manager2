@@ -116,7 +116,7 @@ function initializeNavigation() {
       
       // Close sidebar on navigation link click for mobile
       if (window.innerWidth <= 768) {
-        body.classList.remove('sidebar-open'); // Remove sidebar-open class from body
+        document.body.classList.remove('sidebar-open');
       }
     });
   });
