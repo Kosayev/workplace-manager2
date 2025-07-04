@@ -1230,7 +1230,7 @@ body {
   .section-header {
     flex-direction: column;
     gap: var(--space-16);
-    align-items: flex-start;
+    align-items: center;
   }
   
   .tab-buttons {
