@@ -1400,6 +1400,10 @@ body {
     margin-top: var(--space-16);
 }
 
+.settings-form .form-control {
+    flex: 1;
+}
+
 .settings-form input[type="color"] {
     height: 38px; /* Match button height */
     padding: var(--space-4);
