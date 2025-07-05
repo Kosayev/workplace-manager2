@@ -426,7 +426,7 @@ function renderTasksGrid() {
       <div class="task-meta">
         <div>
           <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
-          期限: ${formatDate(task.dueDate)}
+          期限: ${formatDate(task.due_date)}
         </div>
         <div style="color: ${getDepartmentColor(task.department)}">
           ${getDepartmentName(task.department)}
@@ -919,7 +919,7 @@ async function addTask(event) {
 
   if (error) {
     console.error('Error adding task:', error);
-    alert('タスクの追加に失敗しました。');
+    alert(`タスクの追加に失敗しました。\nエラー: ${error.message}`);
   } else {
     appData.tasks.push(data[0]);
     document.getElementById('modal').classList.remove('active');
