@@ -939,11 +939,11 @@ body {
 }
 
 .handover-item {
-  position: relative; /* For absolute positioning of delete button */
   display: flex;
-  align-items: flex-start;
+  align-items: center; /* Changed from flex-start */
+  flex-wrap: wrap; /* Added to allow wrapping */
   padding: var(--space-16);
-  padding-bottom: var(--space-32); /* Add padding for the button */
+  /* Removed padding-bottom: var(--space-32); */
   border-radius: var(--radius-base);
   border: 1px solid var(--color-card-border);
   margin-bottom: var(--space-12);
@@ -951,9 +951,12 @@ body {
 }
 
 .handover-actions {
-  position: absolute;
-  bottom: var(--space-12);
-  right: var(--space-12);
+  margin-left: auto; /* Push to the right */
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-8); /* Add some top margin for wrapped items */
+  width: 100%; /* Take full width when wrapped */
+  justify-content: flex-end; /* Align buttons to the right */
 }
 
 .handover-item:hover {
@@ -992,12 +995,14 @@ body {
 }
 
 .handover-status {
-  margin-left: auto; /* Push to the right */
+  margin-left: var(--space-16); /* Add left margin */
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: white;
+  min-width: 80px; /* Ensure minimum width */
+  text-align: center;
 }
 
 .status--pending { background-color: #FFC107; } /* Warning color */
