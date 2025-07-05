@@ -1407,6 +1407,15 @@ body {
   background: rgba(var(--color-error-rgb), 0.8);
 }
 
+.btn--warning {
+  background: var(--color-warning);
+  color: var(--color-btn-primary-text);
+}
+
+.btn--warning:hover {
+  background: rgba(var(--color-warning-rgb), 0.8);
+}
+
 .unread-badge {
   background-color: var(--color-error);
   color: white;
@@ -1556,4 +1565,68 @@ body {
 .task-card[data-completed="true"] .task-description {
   text-decoration: line-through;
   color: var(--color-text-secondary);
+}
+
+/* File Management Styles */
+.file-management-info {
+    margin-bottom: var(--space-16);
+}
+
+.file-management-info p {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-12);
+}
+
+.storage-info {
+    background-color: var(--color-secondary);
+    padding: var(--space-12);
+    border-radius: var(--radius-base);
+    font-size: var(--font-size-sm);
+}
+
+.storage-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.storage-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.storage-progress {
+    width: 100%;
+    height: 8px;
+    background-color: var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--color-primary);
+    transition: width var(--duration-normal) var(--ease-standard);
+}
+
+.file-management-actions {
+    display: flex;
+    gap: var(--space-12);
+    flex-wrap: wrap;
+}
+
+.error {
+    color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+    .file-management-actions {
+        flex-direction: column;
+    }
+    
+    .file-management-actions .btn {
+        width: 100%;
+    }
 }

@@ -951,10 +951,15 @@ async function deleteTask(taskId) {
 function renderSettings() {
     renderDepartmentSettings();
     renderPrioritySettings();
+    renderFileManagement();
 
     // Add event listeners for forms after rendering
     document.getElementById('add-department-form').addEventListener('submit', (e) => addSetting(e, 'departments'));
     document.getElementById('add-priority-form').addEventListener('submit', (e) => addSetting(e, 'priorities'));
+    
+    // Add event listeners for file management
+    document.getElementById('check-storage-btn').addEventListener('click', updateStorageDisplay);
+    document.getElementById('cleanup-files-btn').addEventListener('click', manualFileCleanup);
 }
 
 function renderDepartmentSettings() {
@@ -1034,6 +1039,172 @@ async function deleteSetting(id, type) {
     }
 }
 
+function renderFileManagement() {
+    updateStorageDisplay();
+}
+
+async function updateStorageDisplay() {
+    const usageContainer = document.getElementById('storage-usage');
+    usageContainer.innerHTML = '<span>ストレージ使用量を確認中...</span>';
+    
+    const usage = await getStorageUsage();
+    if (usage) {
+        const usagePercent = ((usage.totalSize / (1024 * 1024 * 1024)) * 100).toFixed(1); // % of 1GB
+        usageContainer.innerHTML = `
+            <div class="storage-details">
+                <div class="storage-stat">
+                    <strong>使用量:</strong> ${usage.sizeMB}MB / 1024MB (${usagePercent}%)
+                </div>
+                <div class="storage-stat">
+                    <strong>ファイル数:</strong> ${usage.fileCount}個
+                </div>
+                <div class="storage-progress">
+                    <div class="progress-bar" style="width: ${Math.min(usagePercent, 100)}%"></div>
+                </div>
+            </div>
+        `;
+    } else {
+        usageContainer.innerHTML = '<span class="error">使用量の取得に失敗しました</span>';
+    }
+}
+
+async function manualFileCleanup() {
+    const button = document.getElementById('cleanup-files-btn');
+    button.disabled = true;
+    button.textContent = '削除中...';
+    
+    try {
+        await cleanupOldFiles();
+        await updateStorageDisplay();
+        alert('古いファイルの削除が完了しました');
+    } catch (error) {
+        console.error('手動ファイルクリーンアップエラー:', error);
+        alert('ファイル削除中にエラーが発生しました');
+    } finally {
+        button.disabled = false;
+        button.textContent = '古いファイル削除';
+    }
+}
+
+// File Management Functions
+async function cleanupOldFiles() {
+  try {
+    console.log('古いファイルのクリーンアップを開始します...');
+    
+    // Get list of all files in storage
+    const { data: files, error: listError } = await supabase.storage
+      .from('workplace-files')
+      .list();
+
+    if (listError) {
+      console.error('ファイル一覧の取得に失敗:', listError);
+      return;
+    }
+
+    if (!files || files.length === 0) {
+      console.log('削除対象のファイルはありません');
+      return;
+    }
+
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    // Filter files older than 1 month
+    const oldFiles = files.filter(file => {
+      if (!file.created_at) return false;
+      const fileDate = new Date(file.created_at);
+      return fileDate < oneMonthAgo;
+    });
+
+    if (oldFiles.length === 0) {
+      console.log('1ヶ月以上経過したファイルはありません');
+      return;
+    }
+
+    console.log(`${oldFiles.length}個の古いファイルを削除します`);
+
+    // Delete old files from storage
+    const filesToDelete = oldFiles.map(file => file.name);
+    const { error: deleteError } = await supabase.storage
+      .from('workplace-files')
+      .remove(filesToDelete);
+
+    if (deleteError) {
+      console.error('ファイル削除に失敗:', deleteError);
+    } else {
+      console.log(`${oldFiles.length}個のファイルを正常に削除しました`);
+      
+      // Clean up file_url references in database
+      await cleanupFileReferences();
+    }
+  } catch (error) {
+    console.error('ファイルクリーンアップ中にエラーが発生:', error);
+  }
+}
+
+async function cleanupFileReferences() {
+  try {
+    // Get all storage files to compare against database references
+    const { data: files, error: listError } = await supabase.storage
+      .from('workplace-files')
+      .list();
+
+    if (listError) return;
+
+    const existingFiles = files?.map(file => file.name) || [];
+
+    // Clean up handover file references
+    const handovers = appData.handovers.filter(h => h.file_url);
+    for (const handover of handovers) {
+      const fileName = handover.file_url.split('/').pop();
+      if (!existingFiles.includes(fileName)) {
+        await supabase
+          .from('handovers')
+          .update({ file_url: null })
+          .eq('id', handover.id);
+      }
+    }
+
+    // Clean up task file references
+    const tasks = appData.tasks.filter(t => t.file_url);
+    for (const task of tasks) {
+      const fileName = task.file_url.split('/').pop();
+      if (!existingFiles.includes(fileName)) {
+        await supabase
+          .from('tasks')
+          .update({ file_url: null })
+          .eq('id', task.id);
+      }
+    }
+
+    console.log('データベースの無効なファイル参照をクリーンアップしました');
+  } catch (error) {
+    console.error('ファイル参照のクリーンアップ中にエラーが発生:', error);
+  }
+}
+
+async function getStorageUsage() {
+  try {
+    const { data: files, error } = await supabase.storage
+      .from('workplace-files')
+      .list();
+
+    if (error) {
+      console.error('ストレージ使用量の取得に失敗:', error);
+      return null;
+    }
+
+    const totalSize = files?.reduce((sum, file) => sum + (file.metadata?.size || 0), 0) || 0;
+    const fileSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+    
+    console.log(`現在のストレージ使用量: ${fileSizeMB}MB (${files?.length || 0}ファイル)`);
+    return { totalSize, fileCount: files?.length || 0, sizeMB: fileSizeMB };
+  } catch (error) {
+    console.error('ストレージ使用量の計算中にエラーが発生:', error);
+    return null;
+  }
+}
+
 // Initialize Application
 async function initializeApp() {
   initializeNavigation();
@@ -1044,6 +1215,10 @@ async function initializeApp() {
   document.getElementById('add-task-btn').addEventListener('click', showTaskModal);
   
   await fetchData();
+  
+  // Run file cleanup on app start
+  await cleanupOldFiles();
+  await getStorageUsage();
   
   showSection('dashboard');
 }
