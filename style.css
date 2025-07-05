@@ -1312,6 +1312,17 @@ body {
   body.sidebar-open .sidebar-toggle {
     left: calc(280px + 16px); /* Move button with sidebar */
   }
+
+  .handover-priority {
+    padding: var(--space-4) var(--space-8);
+    min-width: 50px;
+  }
+
+  .handover-status {
+    padding: var(--space-2) var(--space-6);
+    min-width: 60px;
+    margin-left: var(--space-8);
+  }
 }
 
 /* Priority Colors */
