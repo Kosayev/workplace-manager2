@@ -10,6 +10,136 @@ if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE
 
 const supabase = self.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Cache Management System
+const CacheManager = {
+  // キャッシュの有効期限設定（分）
+  CACHE_DURATION: {
+    departments: 60,    // 1時間 - 変更頻度低
+    priorities: 60,     // 1時間 - 変更頻度低
+    schedules: 15,      // 15分 - 変更頻度中
+    handovers: 10,      // 10分 - 変更頻度高
+    tasks: 10           // 10分 - 変更頻度高
+  },
+
+  // データをキャッシュに保存
+  set(key, data, customDuration = null) {
+    try {
+      const duration = customDuration || this.CACHE_DURATION[key] || 15;
+      const expireTime = Date.now() + (duration * 60 * 1000);
+      const cacheItem = {
+        data: data,
+        timestamp: Date.now(),
+        expireTime: expireTime,
+        version: '1.0'
+      };
+      localStorage.setItem(`workplace_cache_${key}`, JSON.stringify(cacheItem));
+      console.log(`✅ キャッシュ保存: ${key} (${duration}分間有効)`);
+    } catch (error) {
+      console.warn('キャッシュ保存に失敗:', error);
+    }
+  },
+
+  // キャッシュからデータを取得
+  get(key) {
+    try {
+      const cached = localStorage.getItem(`workplace_cache_${key}`);
+      if (!cached) return null;
+
+      const cacheItem = JSON.parse(cached);
+      
+      // 有効期限チェック
+      if (Date.now() > cacheItem.expireTime) {
+        this.remove(key);
+        console.log(`⏰ キャッシュ期限切れ: ${key}`);
+        return null;
+      }
+
+      console.log(`🚀 キャッシュヒット: ${key}`);
+      return cacheItem.data;
+    } catch (error) {
+      console.warn('キャッシュ取得に失敗:', error);
+      this.remove(key);
+      return null;
+    }
+  },
+
+  // 特定のキャッシュを削除
+  remove(key) {
+    try {
+      localStorage.removeItem(`workplace_cache_${key}`);
+      console.log(`🗑️ キャッシュ削除: ${key}`);
+    } catch (error) {
+      console.warn('キャッシュ削除に失敗:', error);
+    }
+  },
+
+  // 全キャッシュを削除
+  clear() {
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith('workplace_cache_'));
+      keys.forEach(key => localStorage.removeItem(key));
+      console.log(`🧹 全キャッシュクリア: ${keys.length}個削除`);
+    } catch (error) {
+      console.warn('キャッシュクリアに失敗:', error);
+    }
+  },
+
+  // キャッシュの情報を取得
+  getInfo() {
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith('workplace_cache_'));
+      const info = keys.map(key => {
+        try {
+          const cacheItem = JSON.parse(localStorage.getItem(key));
+          const keyName = key.replace('workplace_cache_', '');
+          const remainingTime = Math.max(0, cacheItem.expireTime - Date.now());
+          return {
+            key: keyName,
+            size: new Blob([localStorage.getItem(key)]).size,
+            remainingMinutes: Math.floor(remainingTime / (60 * 1000)),
+            isExpired: remainingTime <= 0
+          };
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+
+      const totalSize = info.reduce((sum, item) => sum + item.size, 0);
+      return { items: info, totalSize, count: info.length };
+    } catch (error) {
+      console.warn('キャッシュ情報取得に失敗:', error);
+      return { items: [], totalSize: 0, count: 0 };
+    }
+  },
+
+  // 期限切れキャッシュを削除
+  cleanup() {
+    try {
+      const keys = Object.keys(localStorage).filter(key => key.startsWith('workplace_cache_'));
+      let cleaned = 0;
+      
+      keys.forEach(key => {
+        try {
+          const cacheItem = JSON.parse(localStorage.getItem(key));
+          if (Date.now() > cacheItem.expireTime) {
+            localStorage.removeItem(key);
+            cleaned++;
+          }
+        } catch {
+          localStorage.removeItem(key);
+          cleaned++;
+        }
+      });
+
+      if (cleaned > 0) {
+        console.log(`🧼 期限切れキャッシュクリーンアップ: ${cleaned}個削除`);
+      }
+    } catch (error) {
+      console.warn('キャッシュクリーンアップに失敗:', error);
+    }
+  }
+};
+
 // Application Data and State
 let appData = {
   departments: [],
@@ -24,36 +154,100 @@ let currentSection = 'dashboard';
 let activeHandoverDept = 'general';
 
 // --- Data Fetching Functions ---
-async function fetchData() {
+async function fetchData(forceRefresh = false) {
   try {
-    const [departmentsRes, prioritiesRes, schedulesRes, handoversRes, tasksRes] = await Promise.all([
-      supabase.from('departments').select('*'),
-      supabase.from('priorities').select('*'),
-      supabase.from('schedules').select('*'),
-      supabase.from('handovers').select('*'),
-      supabase.from('tasks').select('*')
-    ]);
-
-    if (departmentsRes.error) throw departmentsRes.error;
-    if (prioritiesRes.error) throw prioritiesRes.error;
-    if (schedulesRes.error) throw schedulesRes.error;
-    if (handoversRes.error) throw handoversRes.error;
-    if (tasksRes.error) throw tasksRes.error;
-
-    appData.departments = departmentsRes.data;
-    appData.priorities = prioritiesRes.data;
-    appData.schedules = schedulesRes.data;
-    appData.handovers = handoversRes.data;
-    appData.tasks = tasksRes.data;
+    console.log(`📡 データ取得開始 ${forceRefresh ? '(強制更新)' : '(キャッシュ優先)'}`);
+    
+    // キャッシュクリーンアップを実行
+    CacheManager.cleanup();
+    
+    const dataTypes = ['departments', 'priorities', 'schedules', 'handovers', 'tasks'];
+    const promises = [];
+    
+    for (const type of dataTypes) {
+      promises.push(fetchDataWithCache(type, forceRefresh));
+    }
+    
+    const results = await Promise.all(promises);
+    
+    // 結果をappDataに設定
+    dataTypes.forEach((type, index) => {
+      appData[type] = results[index];
+    });
     
     // Set default active department if it exists
     if (appData.departments.length > 0) {
         activeHandoverDept = appData.departments[0].id;
     }
+    
+    console.log('✅ 全データ取得完了');
 
   } catch (error) {
     console.error('Error fetching data:', error);
-    alert('データの読み込みに失敗しました。');
+    
+    // エラー時はキャッシュからフォールバック
+    const fallbackSuccess = await loadFromCacheFallback();
+    if (!fallbackSuccess) {
+      alert('データの読み込みに失敗しました。');
+    } else {
+      console.log('⚠️ キャッシュからデータを復元しました');
+    }
+  }
+}
+
+// 個別のデータタイプをキャッシュ対応で取得
+async function fetchDataWithCache(dataType, forceRefresh = false) {
+  try {
+    // キャッシュから取得を試行
+    if (!forceRefresh) {
+      const cachedData = CacheManager.get(dataType);
+      if (cachedData) {
+        return cachedData;
+      }
+    }
+    
+    // Supabaseから取得
+    console.log(`🔄 Supabaseから取得: ${dataType}`);
+    const { data, error } = await supabase.from(dataType).select('*');
+    
+    if (error) throw error;
+    
+    // キャッシュに保存
+    CacheManager.set(dataType, data);
+    
+    return data;
+  } catch (error) {
+    console.error(`Error fetching ${dataType}:`, error);
+    
+    // エラー時はキャッシュからフォールバック
+    const cachedData = CacheManager.get(dataType);
+    if (cachedData) {
+      console.log(`⚠️ ${dataType}: Supabaseエラー、キャッシュから復元`);
+      return cachedData;
+    }
+    
+    throw error;
+  }
+}
+
+// エラー時のキャッシュフォールバック
+async function loadFromCacheFallback() {
+  try {
+    const dataTypes = ['departments', 'priorities', 'schedules', 'handovers', 'tasks'];
+    let hasAnyData = false;
+    
+    dataTypes.forEach(type => {
+      const cachedData = CacheManager.get(type);
+      if (cachedData) {
+        appData[type] = cachedData;
+        hasAnyData = true;
+      }
+    });
+    
+    return hasAnyData;
+  } catch (error) {
+    console.error('キャッシュフォールバックに失敗:', error);
+    return false;
   }
 }
 
@@ -805,6 +999,8 @@ async function addSchedule(event) {
     alert('スケジュールの追加に失敗しました。');
   } else {
     appData.schedules.push(data[0]);
+    // キャッシュを更新
+    CacheManager.set('schedules', appData.schedules);
     document.getElementById('modal').classList.remove('active');
     if (currentSection === 'dashboard') renderDashboard();
     else if (currentSection === 'calendar') renderCalendar();
@@ -819,6 +1015,8 @@ async function deleteSchedule(scheduleId) {
     alert('スケジュールの削除に失敗しました。');
   } else {
     appData.schedules = appData.schedules.filter(s => s.id !== parseInt(scheduleId));
+    // キャッシュを更新
+    CacheManager.set('schedules', appData.schedules);
     if (currentSection === 'dashboard') renderDashboard();
     else if (currentSection === 'calendar') renderCalendar();
   }
@@ -862,6 +1060,8 @@ async function addHandover(event) {
     alert('申し送りの追加に失敗しました。');
   } else {
     appData.handovers.push(data[0]);
+    // キャッシュを更新
+    CacheManager.set('handovers', appData.handovers);
     document.getElementById('modal').classList.remove('active');
     if (currentSection === 'handovers') renderHandovers();
   }
@@ -881,6 +1081,8 @@ async function deleteHandover(handoverId) {
     alert('申し送り事項の削除に失敗しました。');
   } else {
     appData.handovers = appData.handovers.filter(h => h.id !== parseInt(handoverId));
+    // キャッシュを更新
+    CacheManager.set('handovers', appData.handovers);
     if (currentSection === 'handovers') renderHandovers();
   }
 }
@@ -924,6 +1126,8 @@ async function addTask(event) {
     alert(`タスクの追加に失敗しました。\nエラー: ${error.message}`);
   } else {
     appData.tasks.push(data[0]);
+    // キャッシュを更新
+    CacheManager.set('tasks', appData.tasks);
     document.getElementById('modal').classList.remove('active');
     if (currentSection === 'tasks') renderTasks();
   }
@@ -943,6 +1147,8 @@ async function deleteTask(taskId) {
     alert('タスクの削除に失敗しました。');
   } else {
     appData.tasks = appData.tasks.filter(t => t.id !== parseInt(taskId));
+    // キャッシュを更新
+    CacheManager.set('tasks', appData.tasks);
     if (currentSection === 'tasks') renderTasks();
   }
 }
@@ -952,6 +1158,7 @@ function renderSettings() {
     renderDepartmentSettings();
     renderPrioritySettings();
     renderFileManagement();
+    renderCacheManagement();
 
     // Add event listeners for forms after rendering
     document.getElementById('add-department-form').addEventListener('submit', (e) => addSetting(e, 'departments'));
@@ -960,6 +1167,11 @@ function renderSettings() {
     // Add event listeners for file management
     document.getElementById('check-storage-btn').addEventListener('click', updateStorageDisplay);
     document.getElementById('cleanup-files-btn').addEventListener('click', manualFileCleanup);
+    
+    // Add event listeners for cache management
+    document.getElementById('check-cache-btn').addEventListener('click', updateCacheDisplay);
+    document.getElementById('refresh-cache-btn').addEventListener('click', refreshAllData);
+    document.getElementById('clear-cache-btn').addEventListener('click', clearAllCache);
 }
 
 function renderDepartmentSettings() {
@@ -1083,6 +1295,87 @@ async function manualFileCleanup() {
     } finally {
         button.disabled = false;
         button.textContent = '古いファイル削除';
+    }
+}
+
+function renderCacheManagement() {
+    updateCacheDisplay();
+}
+
+async function updateCacheDisplay() {
+    const usageContainer = document.getElementById('cache-usage');
+    usageContainer.innerHTML = '<span>キャッシュ情報を確認中...</span>';
+    
+    try {
+        const cacheInfo = CacheManager.getInfo();
+        const totalSizeKB = (cacheInfo.totalSize / 1024).toFixed(2);
+        
+        usageContainer.innerHTML = `
+            <div class="cache-details">
+                <div class="cache-stat">
+                    <strong>キャッシュサイズ:</strong> ${totalSizeKB}KB
+                </div>
+                <div class="cache-stat">
+                    <strong>キャッシュ数:</strong> ${cacheInfo.count}個
+                </div>
+                <div class="cache-items">
+                    ${cacheInfo.items.map(item => `
+                        <div class="cache-item ${item.isExpired ? 'expired' : ''}">
+                            <span class="cache-key">${item.key}</span>
+                            <span class="cache-time">${item.isExpired ? '期限切れ' : `${item.remainingMinutes}分残り`}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('キャッシュ情報取得エラー:', error);
+        usageContainer.innerHTML = '<span class="error">キャッシュ情報の取得に失敗しました</span>';
+    }
+}
+
+async function refreshAllData() {
+    const button = document.getElementById('refresh-cache-btn');
+    button.disabled = true;
+    button.textContent = '更新中...';
+    
+    try {
+        await fetchData(true); // 強制更新
+        await updateCacheDisplay();
+        
+        // 現在のセクションを再レンダリング
+        showSection(currentSection);
+        
+        alert('データの更新が完了しました');
+    } catch (error) {
+        console.error('データ更新エラー:', error);
+        alert('データ更新中にエラーが発生しました');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'データ更新';
+    }
+}
+
+async function clearAllCache() {
+    const button = document.getElementById('clear-cache-btn');
+    
+    if (!confirm('全てのキャッシュを削除しますか？\n次回アクセス時にデータを再取得します。')) {
+        return;
+    }
+    
+    button.disabled = true;
+    button.textContent = '削除中...';
+    
+    try {
+        CacheManager.clear();
+        await updateCacheDisplay();
+        alert('キャッシュをクリアしました');
+    } catch (error) {
+        console.error('キャッシュクリアエラー:', error);
+        alert('キャッシュクリア中にエラーが発生しました');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'キャッシュクリア';
     }
 }
 
