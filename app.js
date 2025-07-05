@@ -871,9 +871,7 @@ function renderHandoverContent() {
           ${getPriorityName(handover.priority)}
         </div>
         <div class="handover-status ${HandoverStatus.CSS_CLASSES[handover.status] || 'status--pending'}" 
-             data-id="${handover.id}" data-status="${handover.status}"
-             onclick="showHandoverStatusModal(${handover.id})" 
-             title="クリックでステータス変更">
+             data-id="${handover.id}" data-status="${handover.status}">
           ${getHandoverStatusName(handover.status)}
         </div>
       </div>
@@ -897,8 +895,8 @@ function renderHandoverContent() {
         </div>
       </div>
       <div class="handover-actions">
-        <button class="btn btn--sm btn--outline" onclick="showHandoverStatusModal(${handover.id})" title="ステータス変更">📊</button>
-        <button class="btn btn--sm btn--outline edit-btn" data-id="${handover.id}" title="編集">✏️</button>
+        <button class="btn btn--sm btn--primary" onclick="showHandoverStatusModal(${handover.id})" title="ステータス変更">ステータス変更</button>
+        <button class="btn btn--sm btn--outline edit-btn" data-id="${handover.id}" title="編集">編集</button>
       </div>
     </div>
   `).join('');
@@ -1024,10 +1022,9 @@ function renderTasksGrid() {
       <div class="task-status-section">
         <div class="task-status-info">
           <span class="task-status-label">ステータス:</span>
-          <button class="task-status-btn ${TaskStatus.CSS_CLASSES[task.status || 'not_started']}" 
-                  onclick="showTaskStatusModal(${task.id})">
+          <span class="task-status-btn ${TaskStatus.CSS_CLASSES[task.status || 'not_started']}">
             ${TaskStatus.LABELS[task.status || 'not_started']}
-          </button>
+          </span>
         </div>
         ${task.assigned_to ? `<div class="task-assigned-to">担当: ${task.assigned_to}</div>` : ''}
         ${task.status_comment ? `<div class="task-status-comment">💬 ${task.status_comment}</div>` : ''}
@@ -1053,6 +1050,7 @@ function renderTasksGrid() {
       
       <!-- タスクアクション -->
       <div class="task-actions">
+        <button class="btn btn--primary btn--sm" onclick="showTaskStatusModal(${task.id})">ステータス変更</button>
         <button class="btn btn--outline btn--sm" onclick="editTask(${task.id})">編集</button>
         <button class="btn btn--danger btn--sm" onclick="deleteTask(${task.id})">削除</button>
       </div>

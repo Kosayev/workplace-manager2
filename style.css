@@ -1900,17 +1900,10 @@ body {
 
 .task-status-btn {
     padding: var(--space-4) var(--space-12);
-    border: none;
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-medium);
-    cursor: pointer;
-    transition: all var(--duration-fast) var(--ease-standard);
-}
-
-.task-status-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    display: inline-block;
 }
 
 .status--not-started {
@@ -2072,19 +2065,12 @@ body {
 
 /* Handover Status Styles */
 .handover-status {
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-standard);
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   min-width: 60px;
   text-align: center;
-}
-
-.handover-status:hover {
-  transform: scale(1.05);
-  box-shadow: var(--shadow-sm);
 }
 
 .handover-status.status--pending { 
