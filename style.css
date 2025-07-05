@@ -1,4 +1,3 @@
-
 :root {
   /* Colors */
   --color-background: rgba(252, 252, 249, 1);
@@ -799,7 +798,7 @@ body {
   margin: 0;
   font-size: var(--font-size-3xl);
   color: var(--color-text);
-  text-align: center; /* Added */
+  
 }
 
 /* Dashboard Grid */
@@ -1233,6 +1232,10 @@ body {
     transform: translateX(-100%);
     width: 280px;
     transition: transform var(--duration-normal) var(--ease-standard);
+    position: fixed;
+    height: 100vh;
+    top: 0;
+    left: 0;
   }
   
   .sidebar.active {
@@ -1258,8 +1261,7 @@ body {
   .main-content {
     margin-left: 0;
     padding: var(--space-16);
-    transform: translateX(0);
-    transition: transform var(--duration-normal) var(--ease-standard);
+    transition: none;
   }
   
   .dashboard-grid {
@@ -1305,7 +1307,6 @@ body {
   body.sidebar-open .sidebar-toggle {
     left: calc(280px + 16px); /* Move button with sidebar */
   }
-}
 
 /* Priority Colors */
 .priority-urgent { background-color: #DC3545; }
