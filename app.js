@@ -909,8 +909,8 @@ async function addTask(event) {
     department: formData.get('department'),
     description: formData.get('description'),
     priority: formData.get('priority'),
-    dueDate: formData.get('dueDate'),
-    assignedBy: formData.get('assignedBy'),
+    due_date: formData.get('dueDate'),
+    assigned_by: formData.get('assignedBy'),
     completed: false,
     file_url: fileUrl
   };
