@@ -170,6 +170,48 @@ const TaskStatus = {
   }
 };
 
+// Handover Status Configuration
+const HandoverStatus = {
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  
+  // ステータスラベル
+  LABELS: {
+    'pending': '未対応',
+    'in_progress': '対応中',
+    'completed': '対応済'
+  },
+  
+  // ステータスのCSS クラス
+  CSS_CLASSES: {
+    'pending': 'status--pending',
+    'in_progress': 'status--in-progress',
+    'completed': 'status--completed'
+  },
+  
+  // ステータスの順序（進行度順）
+  ORDER: ['pending', 'in_progress', 'completed'],
+  
+  // 次のステータスを取得
+  getNextStatus(currentStatus) {
+    const currentIndex = this.ORDER.indexOf(currentStatus);
+    if (currentIndex < this.ORDER.length - 1) {
+      return this.ORDER[currentIndex + 1];
+    }
+    return currentStatus;
+  },
+  
+  // 前のステータスを取得
+  getPreviousStatus(currentStatus) {
+    const currentIndex = this.ORDER.indexOf(currentStatus);
+    if (currentIndex > 0) {
+      return this.ORDER[currentIndex - 1];
+    }
+    return currentStatus;
+  }
+};
+
 // Application Health Monitor
 const HealthMonitor = {
   startTime: Date.now(),
@@ -634,12 +676,7 @@ function getPriorityColor(id) {
 }
 
 function getHandoverStatusName(status) {
-  switch (status) {
-    case 'pending': return '未対応';
-    case 'in-progress': return '対応中';
-    case 'completed': return '完了';
-    default: return status;
-  }
+  return HandoverStatus.LABELS[status] || status;
 }
 
 // Navigation Functions
@@ -833,18 +870,35 @@ function renderHandoverContent() {
         <div class="handover-priority priority-${handover.priority}">
           ${getPriorityName(handover.priority)}
         </div>
-        <div class="handover-status status--${handover.status}" data-id="${handover.id}" data-status="${handover.status}">
+        <div class="handover-status ${HandoverStatus.CSS_CLASSES[handover.status] || 'status--pending'}" 
+             data-id="${handover.id}" data-status="${handover.status}"
+             onclick="showHandoverStatusModal(${handover.id})" 
+             title="クリックでステータス変更">
           ${getHandoverStatusName(handover.status)}
         </div>
       </div>
       <div class="handover-details">
         <div class="handover-title">${handover.title}</div>
         <div class="handover-description">${handover.description}</div>
-        ${handover.file_url ? `<div class="handover-attachment"><a href="${handover.file_url}" target="_blank" rel="noopener noreferrer">添付ファイルを見る</a></div>` : ''}
-        <div class="handover-timestamp">${formatDateTime(handover.timestamp)}</div>
+        ${handover.status_comment ? `<div class="handover-status-comment">💬 ${handover.status_comment}</div>` : ''}
+        ${handover.assigned_to ? `<div class="handover-assigned-to">👤 担当者: ${handover.assigned_to}</div>` : ''}
+        ${handover.file_url ? `<div class="handover-attachment"><a href="${handover.file_url}" target="_blank" rel="noopener noreferrer">📎 添付ファイルを見る</a></div>` : ''}
+        <div class="handover-meta">
+          <div class="handover-meta-item">
+            <span class="handover-meta-label">登録日:</span>
+            <span>${formatDateTime(handover.timestamp)}</span>
+          </div>
+          ${handover.last_updated ? `
+            <div class="handover-meta-item">
+              <span class="handover-meta-label">更新日:</span>
+              <span>${formatDateTime(handover.last_updated)}</span>
+            </div>
+          ` : ''}
+        </div>
       </div>
       <div class="handover-actions">
-        <button class="edit-btn" data-id="${handover.id}">編集</button>
+        <button class="btn btn--sm btn--outline" onclick="showHandoverStatusModal(${handover.id})" title="ステータス変更">📊</button>
+        <button class="btn btn--sm btn--outline edit-btn" data-id="${handover.id}" title="編集">✏️</button>
       </div>
     </div>
   `).join('');
@@ -1517,6 +1571,160 @@ async function updateTaskStatusQuick(taskId, newStatus) {
   }
 }
 
+// === 申し送り事項ステータス管理機能 ===
+
+// 申し送り事項ステータス更新モーダル表示
+function showHandoverStatusModal(handoverId) {
+  const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
+  if (!handover) return;
+
+  const content = `
+    <form class="modal-form" id="update-handover-status-form">
+      <input type="hidden" name="handoverId" value="${handover.id}">
+      
+      <div class="task-info-summary">
+        <h4>${handover.title}</h4>
+        <p class="task-summary-meta">
+          担当者: ${handover.assigned_to || '未設定'} | 
+          部署: ${getDepartmentName(handover.department)} |
+          登録日: ${formatDate(handover.timestamp)}
+        </p>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">ステータス</label>
+        <select class="form-control" name="status" required>
+          <option value="pending" ${handover.status === 'pending' ? 'selected' : ''}>未対応</option>
+          <option value="in_progress" ${handover.status === 'in_progress' ? 'selected' : ''}>対応中</option>
+          <option value="completed" ${handover.status === 'completed' ? 'selected' : ''}>対応済</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">進捗コメント</label>
+        <textarea class="form-control" name="statusComment" rows="3" 
+                  placeholder="例: 確認中です、対応を検討中です、完了しました 等">${handover.status_comment || ''}</textarea>
+        <small class="form-help">現在の状況や進捗状況を入力してください</small>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">担当者変更</label>
+        <input type="text" class="form-control" name="assignedTo" 
+               value="${handover.assigned_to || ''}" placeholder="担当者名">
+      </div>
+      
+      <div class="task-status-actions">
+        <button type="button" class="btn btn--outline" onclick="updateHandoverStatusQuick(${handover.id}, '${HandoverStatus.getPreviousStatus(handover.status || 'pending')}')">
+          ⬅️ ${HandoverStatus.LABELS[HandoverStatus.getPreviousStatus(handover.status || 'pending')]}
+        </button>
+        <button type="button" class="btn btn--primary" onclick="updateHandoverStatusQuick(${handover.id}, '${HandoverStatus.getNextStatus(handover.status || 'pending')}')">
+          ${HandoverStatus.LABELS[HandoverStatus.getNextStatus(handover.status || 'pending')]} ➡️
+        </button>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button>
+        <button type="submit" class="btn btn--primary">更新</button>
+      </div>
+    </form>
+  `;
+  
+  showModal('申し送り事項ステータス更新', content);
+  document.getElementById('update-handover-status-form').addEventListener('submit', updateHandoverStatus);
+}
+
+// 申し送り事項ステータス更新
+async function updateHandoverStatus(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const handoverId = parseInt(formData.get('handoverId'));
+  const newStatus = formData.get('status');
+  const statusComment = formData.get('statusComment');
+  const assignedTo = formData.get('assignedTo');
+  
+  try {
+    const updates = {
+      status: newStatus,
+      status_comment: statusComment,
+      assigned_to: assignedTo,
+      last_updated: new Date().toISOString()
+    };
+    
+    const { error } = await supabase
+      .from('handovers')
+      .update(updates)
+      .eq('id', handoverId);
+      
+    if (error) {
+      throw error;
+    }
+    
+    // ローカルデータを更新
+    const handover = appData.handovers.find(h => h.id === handoverId);
+    if (handover) {
+      Object.assign(handover, updates);
+    }
+    
+    // キャッシュを更新
+    CacheManager.set('handovers', appData.handovers);
+    
+    document.getElementById('modal').classList.remove('active');
+    renderHandovers();
+    
+    // HealthMonitor でイベントを記録
+    HealthMonitor.recordEvent('handover_status_updated');
+    
+  } catch (error) {
+    console.error('Error updating handover status:', error);
+    ErrorTracker.captureError(error, {
+      component: 'handover-status-update',
+      handoverId: handoverId
+    });
+    alert('申し送り事項ステータスの更新に失敗しました。');
+  }
+}
+
+// 申し送り事項ステータスクイック更新
+async function updateHandoverStatusQuick(handoverId, newStatus) {
+  const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
+  if (!handover) return;
+  
+  try {
+    const updates = {
+      status: newStatus,
+      last_updated: new Date().toISOString()
+    };
+    
+    const { error } = await supabase
+      .from('handovers')
+      .update(updates)
+      .eq('id', handoverId);
+      
+    if (error) {
+      throw error;
+    }
+    
+    // ローカルデータを更新
+    Object.assign(handover, updates);
+    
+    // キャッシュを更新
+    CacheManager.set('handovers', appData.handovers);
+    
+    document.getElementById('modal').classList.remove('active');
+    renderHandovers();
+    
+  } catch (error) {
+    console.error('Error quick updating handover status:', error);
+    ErrorTracker.captureError(error, {
+      component: 'handover-status-quick-update',
+      handoverId: handoverId
+    });
+    alert('申し送り事項ステータスの更新に失敗しました。');
+  }
+}
+
+// === タスク編集機能 ===
+
 // タスク編集機能
 function editTask(taskId) {
   const task = appData.tasks.find(t => t.id === parseInt(taskId));
@@ -1693,7 +1901,10 @@ async function addHandover(event) {
     priority: formData.get('priority'),
     timestamp: new Date().toISOString(),
     status: formData.get('status') || 'pending',
-    file_url: fileUrl
+    file_url: fileUrl,
+    status_comment: null,
+    assigned_to: null,
+    last_updated: new Date().toISOString()
   };
   
   const { data, error } = await supabase.from('handovers').insert([newHandover]).select();

@@ -2069,3 +2069,94 @@ body {
         align-items: flex-start;
     }
 }
+
+/* Handover Status Styles */
+.handover-status {
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-standard);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  min-width: 60px;
+  text-align: center;
+}
+
+.handover-status:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-sm);
+}
+
+.handover-status.status--pending { 
+  background-color: rgba(98, 108, 113, 0.15);
+  color: var(--color-info);
+}
+
+.handover-status.status--in-progress { 
+  background-color: rgba(33, 128, 141, 0.15);
+  color: var(--color-primary);
+}
+
+.handover-status.status--completed { 
+  background-color: rgba(33, 128, 141, 0.15);
+  color: var(--color-success);
+}
+
+.handover-status-comment {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-secondary);
+  padding: var(--space-8);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-primary);
+  margin-top: var(--space-8);
+}
+
+.handover-assigned-to {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-4);
+}
+
+.handover-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+}
+
+.handover-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--font-size-sm);
+}
+
+.handover-meta-label {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.handover-actions {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+/* Mobile Responsive for Handovers */
+@media (max-width: 768px) {
+  .handover-meta {
+    gap: var(--space-8);
+  }
+  
+  .handover-meta-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .handover-actions {
+    flex-direction: column;
+  }
+}
