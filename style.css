@@ -941,30 +941,29 @@ body {
 
 .handover-item {
   display: flex;
-  align-items: flex-start; /* Changed from center */
-  flex-wrap: wrap; /* Added to allow wrapping */
+  align-items: flex-start;
   padding: var(--space-16);
-  /* Removed padding-bottom: var(--space-32); */
   border-radius: var(--radius-base);
   border: 1px solid var(--color-card-border);
   margin-bottom: var(--space-12);
   transition: box-shadow var(--duration-fast) var(--ease-standard);
+  gap: var(--space-16);
 }
 
 .handover-meta-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  margin-right: var(--space-16);
+  flex-shrink: 0;
+  min-width: 100px;
 }
 
 .handover-actions {
-  margin-left: auto; /* Push to the right */
   display: flex;
+  flex-direction: column;
   gap: var(--space-8);
-  margin-top: var(--space-8); /* Add some top margin for wrapped items */
-  width: 100%; /* Take full width when wrapped */
-  justify-content: flex-end; /* Align buttons to the right */
+  flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .handover-item:hover {
@@ -984,6 +983,7 @@ body {
 
 .handover-details {
   flex: 1;
+  min-width: 0; /* Allow text to wrap properly */
 }
 
 .handover-title {
@@ -995,6 +995,9 @@ body {
 .handover-description {
   color: var(--color-text-secondary);
   margin-bottom: var(--space-8);
+  line-height: var(--line-height-normal);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .handover-timestamp {
@@ -1319,22 +1322,35 @@ body {
     left: calc(280px + 16px); /* Move button with sidebar */
   }
 
-  /* Specific adjustments for handover icons on mobile */
+  /* Optimized handover layout for mobile */
+  .handover-item {
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  .handover-meta-group {
+    flex-direction: row;
+    align-items: center;
+    min-width: auto;
+    gap: var(--space-12);
+  }
+
   .handover-priority {
-    padding: var(--space-1) var(--space-4); /* Even smaller padding */
-    min-width: 40px; /* Even narrower */
-    font-size: var(--font-size-xs); /* Smaller font size */
+    padding: var(--space-4) var(--space-8);
+    min-width: 60px;
+    font-size: var(--font-size-xs);
   }
 
   .handover-status {
-    padding: var(--space-1) var(--space-4); /* Even smaller padding */
-    min-width: 50px; /* Even narrower */
-    font-size: var(--font-size-xs); /* Smaller font size */
-    margin-left: 0; /* Ensure no left margin */
+    padding: var(--space-4) var(--space-8);
+    min-width: 60px;
+    font-size: var(--font-size-xs);
   }
 
   .handover-actions {
-    margin-top: var(--space-12); /* Adjust margin for better spacing */
+    align-self: stretch;
+    flex-direction: row;
+    justify-content: flex-end;
   }
 }
 

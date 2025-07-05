@@ -295,17 +295,19 @@ function renderHandoverContent() {
   
   contentContainer.innerHTML = handovers.map(handover => `
     <div class="handover-item">
-      <div class="handover-priority priority-${handover.priority}">
-        ${getPriorityName(handover.priority)}
+      <div class="handover-meta-group">
+        <div class="handover-priority priority-${handover.priority}">
+          ${getPriorityName(handover.priority)}
+        </div>
+        <div class="handover-status status--${handover.status}" data-id="${handover.id}" data-status="${handover.status}">
+          ${getHandoverStatusName(handover.status)}
+        </div>
       </div>
       <div class="handover-details">
         <div class="handover-title">${handover.title}</div>
         <div class="handover-description">${handover.description}</div>
         ${handover.file_url ? `<div class="handover-attachment"><a href="${handover.file_url}" target="_blank" rel="noopener noreferrer">添付ファイルを見る</a></div>` : ''}
         <div class="handover-timestamp">${formatDateTime(handover.timestamp)}</div>
-      </div>
-      <div class="handover-status status--${handover.status}" data-id="${handover.id}" data-status="${handover.status}">
-        ${getHandoverStatusName(handover.status)}
       </div>
       <div class="handover-actions">
         <button class="edit-btn" data-id="${handover.id}">編集</button>
