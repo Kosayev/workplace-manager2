@@ -308,7 +308,6 @@ function renderHandoverContent() {
       </div>
       <div class="handover-actions">
         <button class="edit-btn" data-id="${handover.id}">編集</button>
-        <button class="delete-btn" data-id="${handover.id}">×</button>
       </div>
     </div>
   `).join('');
@@ -431,7 +430,6 @@ function renderTasksGrid() {
           ${getDepartmentName(task.department)}
         </div>
       </div>
-      <button class="delete-btn" data-id="${task.id}">×</button>
     </div>
   `).join('');
 
