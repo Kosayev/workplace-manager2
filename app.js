@@ -10,6 +10,322 @@ if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE
 
 const supabase = self.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Error Tracking and Monitoring System
+const ErrorTracker = {
+  // Sentry初期化（本番環境でのみ有効化）
+  init() {
+    if (typeof Sentry !== 'undefined' && window.location.hostname !== 'localhost') {
+      Sentry.init({
+        dsn: 'https://your-sentry-dsn@sentry.io/your-project-id', // 実際のDSNに置き換え
+        environment: 'production',
+        integrations: [
+          new Sentry.BrowserTracing(),
+        ],
+        tracesSampleRate: 0.1, // 10%のトランザクションをサンプリング
+        beforeSend(event) {
+          // 個人情報を含む可能性のあるデータを除外
+          if (event.user) {
+            delete event.user.email;
+            delete event.user.ip_address;
+          }
+          return event;
+        }
+      });
+      
+      console.log('🔍 Sentryエラートラッキング初期化完了');
+      return true;
+    } else {
+      console.log('⚠️ Sentryエラートラッキングは本番環境でのみ有効です');
+      return false;
+    }
+  },
+
+  // エラーを手動で報告
+  captureError(error, context = {}) {
+    console.error('エラーを検出:', error);
+    
+    try {
+      if (typeof Sentry !== 'undefined' && Sentry.captureException) {
+        Sentry.withScope((scope) => {
+          scope.setTag('component', context.component || 'unknown');
+          scope.setLevel('error');
+          scope.setContext('errorContext', context);
+          Sentry.captureException(error);
+        });
+      }
+      
+      // ローカルエラーログも保存
+      this.logErrorLocally(error, context);
+    } catch (sentryError) {
+      console.warn('Sentryエラー送信に失敗:', sentryError);
+    }
+  },
+
+  // 警告レベルのイベントを報告
+  captureWarning(message, context = {}) {
+    console.warn('警告:', message);
+    
+    try {
+      if (typeof Sentry !== 'undefined' && Sentry.captureMessage) {
+        Sentry.withScope((scope) => {
+          scope.setTag('component', context.component || 'unknown');
+          scope.setLevel('warning');
+          scope.setContext('warningContext', context);
+          Sentry.captureMessage(message);
+        });
+      }
+    } catch (sentryError) {
+      console.warn('Sentry警告送信に失敗:', sentryError);
+    }
+  },
+
+  // ローカルエラーログ（Sentryが使えない場合のフォールバック）
+  logErrorLocally(error, context) {
+    try {
+      const errorLog = {
+        timestamp: new Date().toISOString(),
+        message: error.message || error,
+        stack: error.stack,
+        context: context,
+        userAgent: navigator.userAgent,
+        url: window.location.href
+      };
+      
+      const logs = JSON.parse(localStorage.getItem('error_logs') || '[]');
+      logs.push(errorLog);
+      
+      // 最新50件のみ保持
+      if (logs.length > 50) {
+        logs.splice(0, logs.length - 50);
+      }
+      
+      localStorage.setItem('error_logs', JSON.stringify(logs));
+    } catch (storageError) {
+      console.warn('ローカルエラーログ保存に失敗:', storageError);
+    }
+  },
+
+  // ローカルエラーログを取得
+  getLocalErrorLogs() {
+    try {
+      return JSON.parse(localStorage.getItem('error_logs') || '[]');
+    } catch {
+      return [];
+    }
+  },
+
+  // ローカルエラーログをクリア
+  clearLocalErrorLogs() {
+    try {
+      localStorage.removeItem('error_logs');
+      console.log('ローカルエラーログをクリアしました');
+    } catch (error) {
+      console.warn('ローカルエラーログクリアに失敗:', error);
+    }
+  }
+};
+
+// Task Status Configuration
+const TaskStatus = {
+  NOT_STARTED: 'not_started',
+  IN_PROGRESS: 'in_progress',
+  PENDING_APPROVAL: 'pending_approval',
+  COMPLETED: 'completed',
+  
+  // ステータスラベル
+  LABELS: {
+    'not_started': '未着手',
+    'in_progress': '着手中', 
+    'pending_approval': '決裁中',
+    'completed': '対応済'
+  },
+  
+  // ステータスのCSS クラス
+  CSS_CLASSES: {
+    'not_started': 'status--not-started',
+    'in_progress': 'status--in-progress',
+    'pending_approval': 'status--pending-approval',
+    'completed': 'status--completed'
+  },
+  
+  // ステータスの順序（進行度順）
+  ORDER: ['not_started', 'in_progress', 'pending_approval', 'completed'],
+  
+  // 次のステータスを取得
+  getNextStatus(currentStatus) {
+    const currentIndex = this.ORDER.indexOf(currentStatus);
+    if (currentIndex < this.ORDER.length - 1) {
+      return this.ORDER[currentIndex + 1];
+    }
+    return currentStatus;
+  },
+  
+  // 前のステータスを取得
+  getPreviousStatus(currentStatus) {
+    const currentIndex = this.ORDER.indexOf(currentStatus);
+    if (currentIndex > 0) {
+      return this.ORDER[currentIndex - 1];
+    }
+    return currentStatus;
+  }
+};
+
+// Application Health Monitor
+const HealthMonitor = {
+  startTime: Date.now(),
+  metrics: {
+    pageLoads: 0,
+    errors: 0,
+    apiCalls: 0,
+    apiErrors: 0,
+    cacheHits: 0,
+    cacheMisses: 0
+  },
+
+  // メトリクス初期化
+  init() {
+    this.startTime = Date.now();
+    this.setupPerformanceMonitoring();
+    this.setupNetworkMonitoring();
+    console.log('📊 ヘルスモニター初期化完了');
+  },
+
+  // パフォーマンス監視
+  setupPerformanceMonitoring() {
+    // ページロード時間の監視
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.performance && window.performance.timing) {
+          const timing = window.performance.timing;
+          const loadTime = timing.loadEventEnd - timing.navigationStart;
+          
+          if (loadTime > 5000) { // 5秒以上
+            ErrorTracker.captureWarning('ページロード時間が遅い', {
+              component: 'performance',
+              loadTime: loadTime,
+              url: window.location.href
+            });
+          }
+          
+          console.log(`⏱️ ページロード時間: ${loadTime}ms`);
+        }
+      }, 100);
+    });
+
+    // メモリ使用量の監視（対応ブラウザのみ）
+    if (window.performance && window.performance.memory) {
+      setInterval(() => {
+        const memory = window.performance.memory;
+        const memoryUsage = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
+        
+        if (memoryUsage > 0.9) { // 90%以上
+          ErrorTracker.captureWarning('メモリ使用量が高い', {
+            component: 'performance',
+            memoryUsage: `${(memoryUsage * 100).toFixed(1)}%`,
+            usedMB: Math.round(memory.usedJSHeapSize / 1024 / 1024)
+          });
+        }
+      }, 60000); // 1分ごと
+    }
+  },
+
+  // ネットワーク監視
+  setupNetworkMonitoring() {
+    // オンライン/オフライン状態の監視
+    window.addEventListener('online', () => {
+      console.log('🌐 ネットワーク接続復帰');
+      this.recordEvent('network_restored');
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('📡 ネットワーク接続断');
+      ErrorTracker.captureWarning('ネットワーク接続が切断されました', {
+        component: 'network'
+      });
+      this.recordEvent('network_lost');
+    });
+  },
+
+  // メトリクスの記録
+  recordEvent(eventType, details = {}) {
+    switch(eventType) {
+      case 'page_load':
+        this.metrics.pageLoads++;
+        break;
+      case 'error':
+        this.metrics.errors++;
+        break;
+      case 'api_call':
+        this.metrics.apiCalls++;
+        break;
+      case 'api_error':
+        this.metrics.apiErrors++;
+        break;
+      case 'cache_hit':
+        this.metrics.cacheHits++;
+        break;
+      case 'cache_miss':
+        this.metrics.cacheMisses++;
+        break;
+    }
+
+    // メトリクスをローカルストレージに保存
+    try {
+      localStorage.setItem('health_metrics', JSON.stringify({
+        ...this.metrics,
+        lastUpdate: Date.now(),
+        uptime: Date.now() - this.startTime
+      }));
+    } catch (error) {
+      console.warn('メトリクス保存に失敗:', error);
+    }
+  },
+
+  // ヘルスレポートの生成
+  generateHealthReport() {
+    const uptime = Date.now() - this.startTime;
+    const uptimeHours = (uptime / (1000 * 60 * 60)).toFixed(1);
+    
+    return {
+      uptime: {
+        ms: uptime,
+        hours: uptimeHours,
+        formatted: this.formatUptime(uptime)
+      },
+      metrics: { ...this.metrics },
+      errorRate: this.metrics.apiCalls > 0 ? 
+        ((this.metrics.apiErrors / this.metrics.apiCalls) * 100).toFixed(1) : 0,
+      cacheHitRate: (this.metrics.cacheHits + this.metrics.cacheMisses) > 0 ? 
+        ((this.metrics.cacheHits / (this.metrics.cacheHits + this.metrics.cacheMisses)) * 100).toFixed(1) : 0,
+      status: this.getHealthStatus()
+    };
+  },
+
+  // アップタイムをフォーマット
+  formatUptime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}日 ${hours % 24}時間`;
+    if (hours > 0) return `${hours}時間 ${minutes % 60}分`;
+    if (minutes > 0) return `${minutes}分 ${seconds % 60}秒`;
+    return `${seconds}秒`;
+  },
+
+  // ヘルス状態の判定
+  getHealthStatus() {
+    const errorRate = this.metrics.apiCalls > 0 ? 
+      (this.metrics.apiErrors / this.metrics.apiCalls) * 100 : 0;
+    
+    if (errorRate > 10) return 'critical';
+    if (errorRate > 5) return 'warning';
+    if (this.metrics.errors > 10) return 'warning';
+    return 'healthy';
+  }
+};
+
 // Cache Management System
 const CacheManager = {
   // キャッシュの有効期限設定（分）
@@ -55,6 +371,7 @@ const CacheManager = {
       }
 
       console.log(`🚀 キャッシュヒット: ${key}`);
+      HealthMonitor.recordEvent('cache_hit');
       return cacheItem.data;
     } catch (error) {
       console.warn('キャッシュ取得に失敗:', error);
@@ -185,12 +502,25 @@ async function fetchData(forceRefresh = false) {
   } catch (error) {
     console.error('Error fetching data:', error);
     
+    // エラートラッキングに報告
+    ErrorTracker.captureError(error, {
+      component: 'fetchData',
+      operation: 'data_fetch',
+      forceRefresh: forceRefresh
+    });
+    
+    HealthMonitor.recordEvent('error');
+    
     // エラー時はキャッシュからフォールバック
     const fallbackSuccess = await loadFromCacheFallback();
     if (!fallbackSuccess) {
       alert('データの読み込みに失敗しました。');
     } else {
       console.log('⚠️ キャッシュからデータを復元しました');
+      ErrorTracker.captureWarning('データ取得に失敗、キャッシュから復元', {
+        component: 'fetchData',
+        operation: 'fallback_success'
+      });
     }
   }
 }
@@ -208,6 +538,8 @@ async function fetchDataWithCache(dataType, forceRefresh = false) {
     
     // Supabaseから取得
     console.log(`🔄 Supabaseから取得: ${dataType}`);
+    HealthMonitor.recordEvent('api_call');
+    HealthMonitor.recordEvent('cache_miss');
     const { data, error } = await supabase.from(dataType).select('*');
     
     if (error) throw error;
@@ -218,6 +550,14 @@ async function fetchDataWithCache(dataType, forceRefresh = false) {
     return data;
   } catch (error) {
     console.error(`Error fetching ${dataType}:`, error);
+    
+    // API エラーを記録
+    HealthMonitor.recordEvent('api_error');
+    ErrorTracker.captureError(error, {
+      component: 'fetchDataWithCache',
+      dataType: dataType,
+      operation: 'supabase_fetch'
+    });
     
     // エラー時はキャッシュからフォールバック
     const cachedData = CacheManager.get(dataType);
@@ -570,6 +910,7 @@ function renderTasks() {
 function renderTaskFilters() {
   const deptFilter = document.getElementById('task-department-filter');
   const priorityFilter = document.getElementById('task-priority-filter');
+  const statusFilter = document.getElementById('task-status-filter');
   
   deptFilter.innerHTML = '<option value="">全部署</option>' + 
     appData.departments.map(dept => `<option value="${dept.id}">${dept.name}</option>`).join('');
@@ -579,12 +920,14 @@ function renderTaskFilters() {
   
   deptFilter.addEventListener('change', renderTasksGrid);
   priorityFilter.addEventListener('change', renderTasksGrid);
+  statusFilter.addEventListener('change', renderTasksGrid);
 }
 
 function renderTasksGrid() {
   const container = document.getElementById('tasks-grid');
   const deptFilter = document.getElementById('task-department-filter').value;
   const priorityFilter = document.getElementById('task-priority-filter').value;
+  const statusFilter = document.getElementById('task-status-filter').value;
   
   let filteredTasks = appData.tasks;
   
@@ -594,6 +937,10 @@ function renderTasksGrid() {
   
   if (priorityFilter) {
     filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter);
+  }
+  
+  if (statusFilter) {
+    filteredTasks = filteredTasks.filter(t => (t.status || 'not_started') === statusFilter);
   }
 
   const searchTerm = document.getElementById('task-search').value.toLowerCase();
@@ -612,21 +959,48 @@ function renderTasksGrid() {
   }
   
   container.innerHTML = filteredTasks.map(task => `
-    <div class="task-card">
+    <div class="task-card" data-task-id="${task.id}">
       <div class="task-header">
         <h4 class="task-title">${task.title}</h4>
         <span class="task-priority priority-${task.priority}">${getPriorityName(task.priority)}</span>
       </div>
       <div class="task-description">${task.description}</div>
-      ${task.file_url ? `<div class="task-attachment"><a href="${task.file_url}" target="_blank" rel="noopener noreferrer">添付ファイルを見る</a></div>` : ''}
+      
+      <!-- ステータス表示 -->
+      <div class="task-status-section">
+        <div class="task-status-info">
+          <span class="task-status-label">ステータス:</span>
+          <button class="task-status-btn ${TaskStatus.CSS_CLASSES[task.status || 'not_started']}" 
+                  onclick="showTaskStatusModal(${task.id})">
+            ${TaskStatus.LABELS[task.status || 'not_started']}
+          </button>
+        </div>
+        ${task.assigned_to ? `<div class="task-assigned-to">担当: ${task.assigned_to}</div>` : ''}
+        ${task.status_comment ? `<div class="task-status-comment">💬 ${task.status_comment}</div>` : ''}
+      </div>
+      
+      ${task.file_url ? `<div class="task-attachment"><a href="${task.file_url}" target="_blank" rel="noopener noreferrer">📎 添付ファイルを見る</a></div>` : ''}
       <div class="task-meta">
-        <div>
-          <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
-          期限: ${formatDate(task.due_date)}
+        <div class="task-meta-item">
+          <span class="task-meta-label">期限:</span>
+          <span class="task-due-date">${formatDate(task.due_date)}</span>
         </div>
-        <div style="color: ${getDepartmentColor(task.department)}">
-          ${getDepartmentName(task.department)}
+        <div class="task-meta-item">
+          <span class="task-meta-label">部署:</span>
+          <span style="color: ${getDepartmentColor(task.department)}">
+            ${getDepartmentName(task.department)}
+          </span>
         </div>
+        <div class="task-meta-item">
+          <span class="task-meta-label">依頼者:</span>
+          <span>${task.assignedBy || '未設定'}</span>
+        </div>
+      </div>
+      
+      <!-- タスクアクション -->
+      <div class="task-actions">
+        <button class="btn btn--outline btn--sm" onclick="editTask(${task.id})">編集</button>
+        <button class="btn btn--danger btn--sm" onclick="deleteTask(${task.id})">削除</button>
       </div>
     </div>
   `).join('');
@@ -970,13 +1344,252 @@ function showTaskModal() {
       <div class="form-group"><label class="form-label">優先度</label><select class="form-control" name="priority" required>${appData.priorities.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</select></div>
       <div class="form-group"><label class="form-label">期限</label><input type="date" class="form-control" name="dueDate" required></div>
       <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="3" required></textarea></div>
-      <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-control" name="assignedBy" required></div>
+      <div class="form-group"><label class="form-label">依頼者</label><input type="text" class="form-control" name="assignedBy" required></div>
+      <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-control" name="assignedTo" placeholder="タスクを実行する担当者"></div>
       <div class="form-group"><label class="form-label">添付ファイル</label><input type="file" class="form-control" name="file"></div>
       <div class="modal-buttons"><button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button><button type="submit" class="btn btn--primary">追加</button></div>
     </form>
   `;
   showModal('タスク追加', content);
   document.getElementById('add-task-form').addEventListener('submit', addTask);
+}
+
+// タスクステータス更新モーダル
+function showTaskStatusModal(taskId) {
+  const task = appData.tasks.find(t => t.id === parseInt(taskId));
+  if (!task) return;
+
+  const content = `
+    <form class="modal-form" id="update-task-status-form">
+      <input type="hidden" name="taskId" value="${task.id}">
+      
+      <div class="task-info-summary">
+        <h4>${task.title}</h4>
+        <p class="task-summary-meta">
+          担当者: ${task.assigned_to || '未設定'} | 
+          期限: ${formatDate(task.due_date)}
+        </p>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">ステータス</label>
+        <select class="form-control" name="status" required>
+          <option value="not_started" ${task.status === 'not_started' ? 'selected' : ''}>未着手</option>
+          <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>着手中</option>
+          <option value="pending_approval" ${task.status === 'pending_approval' ? 'selected' : ''}>決裁中</option>
+          <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>対応済</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">進捗コメント</label>
+        <textarea class="form-control" name="statusComment" rows="3" 
+                  placeholder="例: 伺書起案中です、承認待ちです、完了しました 等">${task.status_comment || ''}</textarea>
+        <small class="form-help">現在の状況や進捗状況を入力してください</small>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">担当者変更</label>
+        <input type="text" class="form-control" name="assignedTo" 
+               value="${task.assigned_to || ''}" placeholder="担当者名">
+      </div>
+      
+      <div class="task-status-actions">
+        <button type="button" class="btn btn--outline" onclick="updateTaskStatusQuick(${task.id}, '${TaskStatus.getPreviousStatus(task.status || 'not_started')}')">
+          ⬅️ ${TaskStatus.LABELS[TaskStatus.getPreviousStatus(task.status || 'not_started')]}
+        </button>
+        <button type="button" class="btn btn--primary" onclick="updateTaskStatusQuick(${task.id}, '${TaskStatus.getNextStatus(task.status || 'not_started')}')">
+          ${TaskStatus.LABELS[TaskStatus.getNextStatus(task.status || 'not_started')]} ➡️
+        </button>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button>
+        <button type="submit" class="btn btn--primary">更新</button>
+      </div>
+    </form>
+  `;
+  
+  showModal('タスクステータス更新', content);
+  document.getElementById('update-task-status-form').addEventListener('submit', updateTaskStatus);
+}
+
+// タスクステータス更新
+async function updateTaskStatus(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const taskId = parseInt(formData.get('taskId'));
+  const newStatus = formData.get('status');
+  const statusComment = formData.get('statusComment');
+  const assignedTo = formData.get('assignedTo');
+  
+  try {
+    const updates = {
+      status: newStatus,
+      status_comment: statusComment,
+      assigned_to: assignedTo,
+      last_updated: new Date().toISOString()
+    };
+    
+    // completedフィールドも更新
+    if (newStatus === 'completed') {
+      updates.completed = true;
+    } else {
+      updates.completed = false;
+    }
+    
+    const { error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId);
+      
+    if (error) {
+      throw error;
+    }
+    
+    // ローカルデータを更新
+    const task = appData.tasks.find(t => t.id === taskId);
+    if (task) {
+      Object.assign(task, updates);
+    }
+    
+    // キャッシュを更新
+    CacheManager.set('tasks', appData.tasks);
+    
+    document.getElementById('modal').classList.remove('active');
+    renderTasks();
+    
+    // HealthMonitor でイベントを記録
+    HealthMonitor.recordEvent('task_status_updated');
+    
+  } catch (error) {
+    console.error('Error updating task status:', error);
+    ErrorTracker.captureError(error, {
+      component: 'task-status-update',
+      taskId: taskId
+    });
+    alert('タスクステータスの更新に失敗しました。');
+  }
+}
+
+// タスクステータスクイック更新
+async function updateTaskStatusQuick(taskId, newStatus) {
+  const task = appData.tasks.find(t => t.id === parseInt(taskId));
+  if (!task) return;
+  
+  try {
+    const updates = {
+      status: newStatus,
+      last_updated: new Date().toISOString()
+    };
+    
+    if (newStatus === 'completed') {
+      updates.completed = true;
+    } else {
+      updates.completed = false;
+    }
+    
+    const { error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId);
+      
+    if (error) {
+      throw error;
+    }
+    
+    // ローカルデータを更新
+    Object.assign(task, updates);
+    
+    // キャッシュを更新
+    CacheManager.set('tasks', appData.tasks);
+    
+    document.getElementById('modal').classList.remove('active');
+    renderTasks();
+    
+  } catch (error) {
+    console.error('Error quick updating task status:', error);
+    ErrorTracker.captureError(error, {
+      component: 'task-status-quick-update',
+      taskId: taskId
+    });
+    alert('タスクステータスの更新に失敗しました。');
+  }
+}
+
+// タスク編集機能
+function editTask(taskId) {
+  const task = appData.tasks.find(t => t.id === parseInt(taskId));
+  if (!task) return;
+
+  const content = `
+    <form class="modal-form" id="edit-task-form">
+      <input type="hidden" name="taskId" value="${task.id}">
+      <div class="form-group"><label class="form-label">タイトル</label><input type="text" class="form-control" name="title" value="${task.title}" required></div>
+      <div class="form-group"><label class="form-label">部署</label><select class="form-control" name="department" required>${appData.departments.map(d => `<option value="${d.id}" ${task.department === d.id ? 'selected' : ''}>${d.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">優先度</label><select class="form-control" name="priority" required>${appData.priorities.map(p => `<option value="${p.id}" ${task.priority === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label class="form-label">期限</label><input type="date" class="form-control" name="dueDate" value="${task.due_date}" required></div>
+      <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="3" required>${task.description}</textarea></div>
+      <div class="form-group"><label class="form-label">依頼者</label><input type="text" class="form-control" name="assignedBy" value="${task.assignedBy || ''}" required></div>
+      <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-control" name="assignedTo" value="${task.assigned_to || ''}" placeholder="タスクを実行する担当者"></div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  `;
+  
+  showModal('タスク編集', content);
+  document.getElementById('edit-task-form').addEventListener('submit', updateTask);
+}
+
+// タスク更新機能
+async function updateTask(event) {
+  event.preventDefault();
+  const formData = new FormData(event.target);
+  const taskId = parseInt(formData.get('taskId'));
+  
+  try {
+    const updates = {
+      title: formData.get('title'),
+      department: formData.get('department'),
+      priority: formData.get('priority'),
+      due_date: formData.get('dueDate'),
+      description: formData.get('description'),
+      assignedBy: formData.get('assignedBy'),
+      assigned_to: formData.get('assignedTo'),
+      last_updated: new Date().toISOString()
+    };
+    
+    const { error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId);
+      
+    if (error) {
+      throw error;
+    }
+    
+    // ローカルデータを更新
+    const task = appData.tasks.find(t => t.id === taskId);
+    if (task) {
+      Object.assign(task, updates);
+    }
+    
+    // キャッシュを更新
+    CacheManager.set('tasks', appData.tasks);
+    
+    document.getElementById('modal').classList.remove('active');
+    renderTasks();
+    
+  } catch (error) {
+    console.error('Error updating task:', error);
+    ErrorTracker.captureError(error, {
+      component: 'task-update',
+      taskId: taskId
+    });
+    alert('タスクの更新に失敗しました。');
+  }
 }
 
 // --- Data Modification Functions ---
@@ -1176,7 +1789,11 @@ async function addTask(event) {
     due_date: formData.get('dueDate'),
     assignedBy: formData.get('assignedBy'),
     completed: false,
-    file_url: fileUrl
+    file_url: fileUrl,
+    status: 'not_started', // 未着手
+    status_comment: '', // ステータスコメント
+    assigned_to: formData.get('assignedTo') || '', // 担当者
+    last_updated: new Date().toISOString()
   };
   
   const { data, error } = await supabase.from('tasks').insert([newTask]).select();
@@ -1859,10 +2476,105 @@ async function getStorageUsage() {
   }
 }
 
+// Monitoring Management Functions
+async function checkMonitoringStatus() {
+  const sentryInitialized = ErrorTracker.init();
+  const healthReport = HealthMonitor.generateHealthReport();
+  
+  // Update monitoring status display
+  document.getElementById('sentry-status').textContent = sentryInitialized ? '動作中' : '無効';
+  document.getElementById('sentry-status').className = sentryInitialized ? 'status-success' : 'status-warning';
+  
+  document.getElementById('uptime-status').textContent = healthReport.uptime.formatted;
+  document.getElementById('uptime-status').className = 'status-info';
+  
+  document.getElementById('performance-status').textContent = 
+    healthReport.status === 'healthy' ? '正常' : 
+    healthReport.status === 'warning' ? '警告' : '異常';
+  document.getElementById('performance-status').className = 
+    healthReport.status === 'healthy' ? 'status-success' : 
+    healthReport.status === 'warning' ? 'status-warning' : 'status-error';
+  
+  console.log('📊 監視状況:', {
+    sentry: sentryInitialized,
+    health: healthReport
+  });
+}
+
+async function testErrorTracking() {
+  try {
+    // 意図的にエラーを発生させてテスト
+    const testError = new Error('テスト用エラー - 無視してください');
+    ErrorTracker.captureError(testError, {
+      component: 'monitoring-test',
+      testType: 'manual'
+    });
+    
+    // 警告レベルのテスト
+    ErrorTracker.captureWarning('テスト用警告 - 無視してください', {
+      component: 'monitoring-test',
+      testType: 'manual'
+    });
+    
+    alert('エラートラッキングテストが完了しました。コンソールとSentryダッシュボードを確認してください。');
+  } catch (error) {
+    console.error('エラートラッキングテストに失敗:', error);
+  }
+}
+
+async function viewLocalLogs() {
+  try {
+    const logs = ErrorTracker.getLocalErrorLogs();
+    const healthMetrics = JSON.parse(localStorage.getItem('health_metrics') || '{}');
+    
+    const logWindow = window.open('', '_blank', 'width=800,height=600');
+    logWindow.document.write(`
+      <html>
+        <head>
+          <title>システムログ</title>
+          <style>
+            body { font-family: monospace; margin: 20px; }
+            .log-entry { margin: 10px 0; padding: 10px; border-left: 3px solid #ccc; }
+            .error { border-left-color: #f44336; }
+            .warning { border-left-color: #ff9800; }
+            .info { border-left-color: #2196f3; }
+            .timestamp { color: #666; font-size: 0.9em; }
+            .metrics { background: #f5f5f5; padding: 15px; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>システムログ</h1>
+          <div class="metrics">
+            <h2>ヘルスメトリクス</h2>
+            <pre>${JSON.stringify(healthMetrics, null, 2)}</pre>
+          </div>
+          <h2>エラーログ (最新${logs.length}件)</h2>
+          ${logs.reverse().map(log => `
+            <div class="log-entry error">
+              <div class="timestamp">${new Date(log.timestamp).toLocaleString()}</div>
+              <div><strong>${log.message}</strong></div>
+              ${log.stack ? `<pre>${log.stack}</pre>` : ''}
+              ${log.context ? `<div>Context: ${JSON.stringify(log.context)}</div>` : ''}
+            </div>
+          `).join('')}
+        </body>
+      </html>
+    `);
+    logWindow.document.close();
+  } catch (error) {
+    console.error('ログ表示に失敗:', error);
+    alert('ログの表示に失敗しました。コンソールを確認してください。');
+  }
+}
+
 // Initialize Application
 async function initializeApp() {
   initializeNavigation();
   initializeModal();
+  
+  // Initialize monitoring systems
+  ErrorTracker.init();
+  HealthMonitor.init();
   
   // Initialize image optimization features
   LazyLoader.init();
@@ -1875,11 +2587,19 @@ async function initializeApp() {
   document.getElementById('add-handover-btn').addEventListener('click', showHandoverModal);
   document.getElementById('add-task-btn').addEventListener('click', showTaskModal);
   
+  // Add monitoring event listeners
+  document.getElementById('check-monitoring-btn').addEventListener('click', checkMonitoringStatus);
+  document.getElementById('test-error-btn').addEventListener('click', testErrorTracking);
+  document.getElementById('view-logs-btn').addEventListener('click', viewLocalLogs);
+  
   await fetchData();
   
   // Run file cleanup on app start
   await cleanupOldFiles();
   await getStorageUsage();
+  
+  // Initialize monitoring status
+  await checkMonitoringStatus();
   
   showSection('dashboard');
 }

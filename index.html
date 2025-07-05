@@ -126,6 +126,13 @@
                 <select id="task-priority-filter" class="form-control">
                     <option value="">全優先度</option>
                 </select>
+                <select id="task-status-filter" class="form-control">
+                    <option value="">全ステータス</option>
+                    <option value="not_started">未着手</option>
+                    <option value="in_progress">着手中</option>
+                    <option value="pending_approval">決裁中</option>
+                    <option value="completed">対応済</option>
+                </select>
             </div>
             
             <div class="tasks-grid" id="tasks-grid"></div>
@@ -220,6 +227,33 @@
                         <button type="button" class="btn btn--primary" id="test-optimization-btn">テスト実行</button>
                     </div>
                 </div>
+
+                <!-- Monitoring Settings -->
+                <div class="settings-card">
+                    <h3>監視・エラートラッキング</h3>
+                    <div class="monitoring-info">
+                        <p>システムの安定性とパフォーマンスを監視します</p>
+                        <div id="monitoring-status" class="monitoring-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">エラートラッキング:</span>
+                                <span class="stat-value" id="sentry-status">確認中...</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">稼働時間監視:</span>
+                                <span class="stat-value" id="uptime-status">設定が必要</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">パフォーマンス:</span>
+                                <span class="stat-value" id="performance-status">正常</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="monitoring-actions">
+                        <button type="button" class="btn btn--secondary" id="check-monitoring-btn">監視状況確認</button>
+                        <button type="button" class="btn btn--primary" id="test-error-btn">エラーテスト</button>
+                        <button type="button" class="btn btn--outline" id="view-logs-btn">ログ確認</button>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -236,6 +270,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://browser.sentry-cdn.com/7.119.0/bundle.tracing.min.js" integrity="sha384-8/VyVk2I8w1tGYYnN1xYs2mJ+fGU4LfJ/qJ/7QKR7+oYzJy6lGP5h7v7O8dA9eGH" crossorigin="anonymous"></script>
     <script src="app.js"></script>
 </body>
 </html>

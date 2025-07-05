@@ -31,7 +31,7 @@ The application uses Supabase with the following tables:
 - `priorities` - Priority levels (id, name, color)  
 - `schedules` - Daily scheduling (id, title, department, date, time, description, duration)
 - `handovers` - Handover items (id, department, title, description, priority, timestamp, status, file_url)
-- `tasks` - Task management (id, title, department, description, priority, due_date, assignedBy, completed, file_url)
+- `tasks` - Task management (id, title, department, description, priority, due_date, assignedBy, completed, file_url, status, status_comment, assigned_to, last_updated)
 
 ## Application Architecture
 
@@ -49,7 +49,7 @@ The application uses Supabase with the following tables:
 
 1. **Dashboard**: Today/tomorrow schedule overview with search
 2. **Handovers** (申し送り事項): Department-based tabs with priority/status filtering
-3. **Tasks** (タスク管理): Grid-based task management with completion tracking
+3. **Tasks** (タスク管理): Advanced task management with status tracking, progress comments, and assignee management
 4. **Calendar**: Monthly calendar view with department-colored events
 5. **Settings**: Dynamic department and priority management
 
@@ -135,10 +135,25 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
 - CDN caching headers for static assets
 - Supabase domain whitelist for image optimization
 
+### Task Status Management (New Feature)
+- **Four Status Types**: 未着手(not_started), 着手中(in_progress), 決裁中(pending_approval), 対応済(completed)
+- **Progress Comments**:担当者が進捗コメントを追加可能 (例: "伺書起案中です")
+- **Assignee Tracking**: 依頼者(assignedBy)と担当者(assigned_to)を分けて管理
+- **Quick Actions**: ステータスの進行/後退をワンクリックで実行
+- **Status Filtering**: ステータス別でのタスク絞り込み表示
+- **Visual Indicators**: ステータス別の色分け表示とアイコン
+
+### Error Tracking & Monitoring
+- **Sentry Integration**: 本番環境でのエラー自動収集
+- **Health Monitoring**: パフォーマンス・メモリ・ネットワーク監視
+- **Local Fallback**: Sentryが利用できない場合のローカルログ保存
+- **Monitoring Dashboard**: 設定画面での監視状況確認
+
 ## Important Implementation Details
 
 - All text is in Japanese - maintain this when making changes
-- Status management uses specific values: 'pending', 'in-progress', 'completed'
+- Task status management uses specific values: 'not_started', 'in_progress', 'pending_approval', 'completed'
+- Handover status uses: 'pending', 'in-progress', 'completed'
 - File uploads include automatic image optimization before Supabase upload
 - Cache keys use 'workplace_cache_' prefix for easy identification
 - Image optimization gracefully degrades if optimization fails
