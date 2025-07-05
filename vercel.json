@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "app.js": {
-      "maxDuration": 10
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -40,11 +35,5 @@
     "domains": [
       "fpykdcvcswamsiawtibh.supabase.co"
     ]
-  },
-  "rewrites": [
-    {
-      "source": "/_next/image",
-      "destination": "/_vercel/image"
-    }
-  ]
+  }
 }
