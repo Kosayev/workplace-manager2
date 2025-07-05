@@ -301,6 +301,7 @@ function renderHandoverContent() {
       <div class="handover-details">
         <div class="handover-title">${handover.title}</div>
         <div class="handover-description">${handover.description}</div>
+        ${handover.file_url ? `<div class="handover-attachment"><a href="${handover.file_url}" target="_blank" rel="noopener noreferrer">添付ファイルを見る</a></div>` : ''}
         <div class="handover-timestamp">${formatDateTime(handover.timestamp)}</div>
       </div>
       <div class="handover-status status--${handover.status}" data-id="${handover.id}" data-status="${handover.status}">
@@ -421,6 +422,7 @@ function renderTasksGrid() {
         <span class="task-priority priority-${task.priority}">${getPriorityName(task.priority)}</span>
       </div>
       <div class="task-description">${task.description}</div>
+      ${task.file_url ? `<div class="task-attachment"><a href="${task.file_url}" target="_blank" rel="noopener noreferrer">添付ファイルを見る</a></div>` : ''}
       <div class="task-meta">
         <div>
           <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${task.completed ? 'checked' : ''}>
@@ -698,6 +700,7 @@ function showHandoverModal() {
         <option value="completed">完了</option>
       </select></div>
       <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="4" required></textarea></div>
+      <div class="form-group"><label class="form-label">添付ファイル</label><input type="file" class="form-control" name="file"></div>
       <div class="modal-buttons"><button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button><button type="submit" class="btn btn--primary">追加</button></div>
     </form>
   `;
@@ -772,6 +775,7 @@ function showTaskModal() {
       <div class="form-group"><label class="form-label">期限</label><input type="date" class="form-control" name="dueDate" required></div>
       <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="3" required></textarea></div>
       <div class="form-group"><label class="form-label">担当者</label><input type="text" class="form-control" name="assignedBy" required></div>
+      <div class="form-group"><label class="form-label">添付ファイル</label><input type="file" class="form-control" name="file"></div>
       <div class="modal-buttons"><button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button><button type="submit" class="btn btn--primary">追加</button></div>
     </form>
   `;
@@ -821,13 +825,32 @@ async function deleteSchedule(scheduleId) {
 async function addHandover(event) {
   event.preventDefault();
   const formData = new FormData(event.target);
+  const file = formData.get('file');
+  let fileUrl = null;
+
+  if (file && file.size > 0) {
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('workplace-files')
+      .upload(`${Date.now()}_${file.name}`, file);
+
+    if (fileError) {
+      console.error('Error uploading file:', fileError);
+      alert('ファイルのアップロードに失敗しました。');
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
+    fileUrl = urlData.publicUrl;
+  }
+
   const newHandover = {
     department: formData.get('department'),
     title: formData.get('title'),
     description: formData.get('description'),
     priority: formData.get('priority'),
     timestamp: new Date().toISOString(),
-    status: formData.get('status') || 'pending' // Add status, default to 'pending'
+    status: formData.get('status') || 'pending',
+    file_url: fileUrl
   };
   
   const { data, error } = await supabase.from('handovers').insert([newHandover]).select();
@@ -843,6 +866,12 @@ async function addHandover(event) {
 }
 
 async function deleteHandover(handoverId) {
+  const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
+  if (handover && handover.file_url) {
+    const fileName = handover.file_url.split('/').pop();
+    await supabase.storage.from('workplace-files').remove([fileName]);
+  }
+
   const { error } = await supabase.from('handovers').delete().eq('id', handoverId);
 
   if (error) {
@@ -857,6 +886,24 @@ async function deleteHandover(handoverId) {
 async function addTask(event) {
   event.preventDefault();
   const formData = new FormData(event.target);
+  const file = formData.get('file');
+  let fileUrl = null;
+
+  if (file && file.size > 0) {
+    const { data: fileData, error: fileError } = await supabase.storage
+      .from('workplace-files')
+      .upload(`${Date.now()}_${file.name}`, file);
+
+    if (fileError) {
+      console.error('Error uploading file:', fileError);
+      alert('ファイルのアップロードに失敗しました。');
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
+    fileUrl = urlData.publicUrl;
+  }
+
   const newTask = {
     title: formData.get('title'),
     department: formData.get('department'),
@@ -864,7 +911,8 @@ async function addTask(event) {
     priority: formData.get('priority'),
     dueDate: formData.get('dueDate'),
     assignedBy: formData.get('assignedBy'),
-    completed: false
+    completed: false,
+    file_url: fileUrl
   };
   
   const { data, error } = await supabase.from('tasks').insert([newTask]).select();
@@ -880,6 +928,12 @@ async function addTask(event) {
 }
 
 async function deleteTask(taskId) {
+  const task = appData.tasks.find(t => t.id === parseInt(taskId));
+  if (task && task.file_url) {
+    const fileName = task.file_url.split('/').pop();
+    await supabase.storage.from('workplace-files').remove([fileName]);
+  }
+
   const { error } = await supabase.from('tasks').delete().eq('id', taskId);
 
   if (error) {

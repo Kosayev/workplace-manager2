@@ -1512,3 +1512,15 @@ body {
   text-decoration: line-through;
   color: var(--color-text-secondary);
 }
+
+.handover-attachment,
+.task-attachment {
+  margin-top: var(--space-8);
+  font-size: var(--font-size-sm);
+}
+
+.handover-attachment a,
+.task-attachment a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
