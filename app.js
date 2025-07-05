@@ -1029,18 +1029,48 @@ async function addHandover(event) {
   let fileUrl = null;
 
   if (file && file.size > 0) {
-    const { data: fileData, error: fileError } = await supabase.storage
-      .from('workplace-files')
-      .upload(`${Date.now()}_${file.name}`, file);
+    try {
+      // 画像ファイルの場合は最適化を実行
+      let uploadFile = file;
+      if (file.type.startsWith('image/')) {
+        console.log('🖼️ 画像最適化を開始します...');
+        const optimizationResult = await ImageOptimizer.optimizeImage(file);
+        uploadFile = optimizationResult.optimizedFile;
+        
+        if (optimizationResult.compressionRatio > 0) {
+          console.log(`✨ 画像最適化完了: ${optimizationResult.compressionRatio}% 削減`);
+        }
+      }
 
-    if (fileError) {
-      console.error('Error uploading file:', fileError);
-      alert('ファイルのアップロードに失敗しました。');
-      return;
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('workplace-files')
+        .upload(`${Date.now()}_${file.name}`, uploadFile);
+
+      if (fileError) {
+        console.error('Error uploading file:', fileError);
+        alert('ファイルのアップロードに失敗しました。');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
+      fileUrl = urlData.publicUrl;
+    } catch (optimizationError) {
+      console.warn('画像最適化に失敗、元ファイルをアップロード:', optimizationError);
+      
+      // 最適化に失敗した場合は元ファイルをアップロード
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('workplace-files')
+        .upload(`${Date.now()}_${file.name}`, file);
+
+      if (fileError) {
+        console.error('Error uploading file:', fileError);
+        alert('ファイルのアップロードに失敗しました。');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
+      fileUrl = urlData.publicUrl;
     }
-
-    const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
-    fileUrl = urlData.publicUrl;
   }
 
   const newHandover = {
@@ -1094,18 +1124,48 @@ async function addTask(event) {
   let fileUrl = null;
 
   if (file && file.size > 0) {
-    const { data: fileData, error: fileError } = await supabase.storage
-      .from('workplace-files')
-      .upload(`${Date.now()}_${file.name}`, file);
+    try {
+      // 画像ファイルの場合は最適化を実行
+      let uploadFile = file;
+      if (file.type.startsWith('image/')) {
+        console.log('🖼️ 画像最適化を開始します...');
+        const optimizationResult = await ImageOptimizer.optimizeImage(file);
+        uploadFile = optimizationResult.optimizedFile;
+        
+        if (optimizationResult.compressionRatio > 0) {
+          console.log(`✨ 画像最適化完了: ${optimizationResult.compressionRatio}% 削減`);
+        }
+      }
 
-    if (fileError) {
-      console.error('Error uploading file:', fileError);
-      alert('ファイルのアップロードに失敗しました。');
-      return;
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('workplace-files')
+        .upload(`${Date.now()}_${file.name}`, uploadFile);
+
+      if (fileError) {
+        console.error('Error uploading file:', fileError);
+        alert('ファイルのアップロードに失敗しました。');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
+      fileUrl = urlData.publicUrl;
+    } catch (optimizationError) {
+      console.warn('画像最適化に失敗、元ファイルをアップロード:', optimizationError);
+      
+      // 最適化に失敗した場合は元ファイルをアップロード
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('workplace-files')
+        .upload(`${Date.now()}_${file.name}`, file);
+
+      if (fileError) {
+        console.error('Error uploading file:', fileError);
+        alert('ファイルのアップロードに失敗しました。');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
+      fileUrl = urlData.publicUrl;
     }
-
-    const { data: urlData } = supabase.storage.from('workplace-files').getPublicUrl(fileData.path);
-    fileUrl = urlData.publicUrl;
   }
 
   const newTask = {
@@ -1159,6 +1219,7 @@ function renderSettings() {
     renderPrioritySettings();
     renderFileManagement();
     renderCacheManagement();
+    renderOptimizationManagement();
 
     // Add event listeners for forms after rendering
     document.getElementById('add-department-form').addEventListener('submit', (e) => addSetting(e, 'departments'));
@@ -1172,6 +1233,10 @@ function renderSettings() {
     document.getElementById('check-cache-btn').addEventListener('click', updateCacheDisplay);
     document.getElementById('refresh-cache-btn').addEventListener('click', refreshAllData);
     document.getElementById('clear-cache-btn').addEventListener('click', clearAllCache);
+    
+    // Add event listeners for optimization management
+    document.getElementById('check-optimization-btn').addEventListener('click', updateOptimizationDisplay);
+    document.getElementById('test-optimization-btn').addEventListener('click', testOptimization);
 }
 
 function renderDepartmentSettings() {
@@ -1379,6 +1444,302 @@ async function clearAllCache() {
     }
 }
 
+function renderOptimizationManagement() {
+    updateOptimizationDisplay();
+}
+
+function updateOptimizationDisplay() {
+    const statusContainer = document.getElementById('optimization-status');
+    
+    try {
+        const webpSupport = ImageOptimizer.supportsWebP;
+        const avifSupport = ImageOptimizer.supportsAVIF;
+        const lazyLoadSupport = !!LazyLoader.imageObserver;
+        
+        statusContainer.innerHTML = `
+            <h4>ブラウザサポート状況</h4>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">${webpSupport ? '✅' : '❌'}</div>
+                    <div class="stat-label">WebP</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${avifSupport ? '✅' : '❌'}</div>
+                    <div class="stat-label">AVIF</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${lazyLoadSupport ? '✅' : '❌'}</div>
+                    <div class="stat-label">遅延読み込み</div>
+                </div>
+            </div>
+            <div style="margin-top: var(--space-12); font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+                最適フォーマット: ${ImageOptimizer.getBestFormat().extension.toUpperCase()}
+            </div>
+        `;
+    } catch (error) {
+        console.error('最適化情報取得エラー:', error);
+        statusContainer.innerHTML = '<span class="error">最適化情報の取得に失敗しました</span>';
+    }
+}
+
+async function testOptimization() {
+    const button = document.getElementById('test-optimization-btn');
+    button.disabled = true;
+    button.textContent = 'テスト中...';
+    
+    try {
+        // テスト用の小さな画像データを作成
+        const canvas = document.createElement('canvas');
+        canvas.width = 100;
+        canvas.height = 100;
+        const ctx = canvas.getContext('2d');
+        
+        // グラデーションを描画
+        const gradient = ctx.createLinearGradient(0, 0, 100, 100);
+        gradient.addColorStop(0, '#4A90E2');
+        gradient.addColorStop(1, '#2E5B7A');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 100, 100);
+        
+        // Blobに変換
+        const testBlob = await new Promise(resolve => {
+            canvas.toBlob(resolve, 'image/png', 1.0);
+        });
+        
+        const testFile = new File([testBlob], 'test-image.png', { type: 'image/png' });
+        
+        console.log('🧪 画像最適化テスト開始...');
+        const result = await ImageOptimizer.optimizeImage(testFile);
+        
+        alert(`テスト完了！
+        
+元ファイル: ${(result.originalSize / 1024).toFixed(1)}KB
+最適化後: ${(result.optimizedSize / 1024).toFixed(1)}KB
+圧縮率: ${result.compressionRatio}%
+フォーマット: ${result.format}
+
+詳細はコンソールをご確認ください。`);
+        
+    } catch (error) {
+        console.error('最適化テストエラー:', error);
+        alert('最適化テスト中にエラーが発生しました');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'テスト実行';
+    }
+}
+
+// Image Optimization Functions
+const ImageOptimizer = {
+  // サポートされている画像フォーマットをチェック
+  supportsWebP: (() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  })(),
+
+  supportsAVIF: (() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas.toDataURL('image/avif').indexOf('data:image/avif') === 0;
+  })(),
+
+  // 最適な出力フォーマットを選択
+  getBestFormat() {
+    if (this.supportsAVIF) return { format: 'image/avif', extension: 'avif' };
+    if (this.supportsWebP) return { format: 'image/webp', extension: 'webp' };
+    return { format: 'image/jpeg', extension: 'jpg' };
+  },
+
+  // 画像を最適化
+  async optimizeImage(file, options = {}) {
+    const {
+      maxWidth = 1200,
+      maxHeight = 1200,
+      quality = 0.85,
+      enableResize = true,
+      enableFormatConversion = true
+    } = options;
+
+    return new Promise((resolve, reject) => {
+      // 画像以外のファイルはそのまま返す
+      if (!file.type.startsWith('image/')) {
+        resolve({ 
+          optimizedFile: file, 
+          originalSize: file.size, 
+          optimizedSize: file.size, 
+          compressionRatio: 0,
+          format: 'no-change'
+        });
+        return;
+      }
+
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          const originalSize = file.size;
+
+          // リサイズが有効で、画像が指定サイズより大きい場合
+          if (enableResize && (width > maxWidth || height > maxHeight)) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+            console.log(`📐 画像リサイズ: ${img.width}x${img.height} → ${width}x${height}`);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          // 画像を描画
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 出力フォーマットを決定
+          let outputFormat = file.type;
+          let formatInfo = 'original';
+
+          if (enableFormatConversion) {
+            const bestFormat = this.getBestFormat();
+            outputFormat = bestFormat.format;
+            formatInfo = bestFormat.extension;
+          }
+
+          // Blobとして出力
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('画像の最適化に失敗しました'));
+              return;
+            }
+
+            const optimizedSize = blob.size;
+            const compressionRatio = ((originalSize - optimizedSize) / originalSize * 100).toFixed(1);
+
+            console.log(`🎨 画像最適化完了:
+              📏 サイズ: ${(originalSize/1024).toFixed(1)}KB → ${(optimizedSize/1024).toFixed(1)}KB
+              📉 圧縮率: ${compressionRatio}%
+              🎭 フォーマット: ${formatInfo}`);
+
+            resolve({
+              optimizedFile: new File([blob], file.name, { type: outputFormat }),
+              originalSize,
+              optimizedSize,
+              compressionRatio: parseFloat(compressionRatio),
+              format: formatInfo
+            });
+          }, outputFormat, quality);
+
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      img.onerror = () => reject(new Error('画像の読み込みに失敗しました'));
+      img.src = URL.createObjectURL(file);
+    });
+  },
+
+  // 複数画像の一括最適化
+  async optimizeMultipleImages(files, options = {}) {
+    const results = [];
+    let totalOriginalSize = 0;
+    let totalOptimizedSize = 0;
+
+    for (const file of files) {
+      try {
+        const result = await this.optimizeImage(file, options);
+        results.push(result);
+        totalOriginalSize += result.originalSize;
+        totalOptimizedSize += result.optimizedSize;
+      } catch (error) {
+        console.error(`画像最適化エラー (${file.name}):`, error);
+        results.push({
+          optimizedFile: file,
+          originalSize: file.size,
+          optimizedSize: file.size,
+          compressionRatio: 0,
+          format: 'error',
+          error: error.message
+        });
+      }
+    }
+
+    const totalCompressionRatio = totalOriginalSize > 0 
+      ? ((totalOriginalSize - totalOptimizedSize) / totalOriginalSize * 100).toFixed(1)
+      : 0;
+
+    return {
+      results,
+      summary: {
+        totalOriginalSize,
+        totalOptimizedSize,
+        totalCompressionRatio: parseFloat(totalCompressionRatio),
+        processedCount: files.length
+      }
+    };
+  }
+};
+
+// Lazy Loading Implementation
+const LazyLoader = {
+  // Intersection Observer のインスタンス
+  imageObserver: null,
+
+  // 初期化
+  init() {
+    if ('IntersectionObserver' in window) {
+      this.imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            this.loadImage(entry.target);
+            this.imageObserver.unobserve(entry.target);
+          }
+        });
+      }, {
+        rootMargin: '50px' // 画面に入る50px前から読み込み開始
+      });
+    }
+  },
+
+  // 画像を遅延読み込み対象として設定
+  observe(img) {
+    if (this.imageObserver && img.dataset.src) {
+      img.classList.add('lazy-loading');
+      this.imageObserver.observe(img);
+    } else {
+      // Intersection Observer が使えない場合は即座に読み込み
+      this.loadImage(img);
+    }
+  },
+
+  // 画像を実際に読み込み
+  loadImage(img) {
+    if (img.dataset.src) {
+      img.src = img.dataset.src;
+      img.classList.remove('lazy-loading');
+      img.classList.add('lazy-loaded');
+      
+      img.onload = () => {
+        console.log('🖼️ 遅延画像読み込み完了:', img.src);
+      };
+    }
+  },
+
+  // 全ての遅延読み込み画像を強制読み込み
+  loadAll() {
+    document.querySelectorAll('img[data-src]').forEach(img => {
+      this.loadImage(img);
+      if (this.imageObserver) {
+        this.imageObserver.unobserve(img);
+      }
+    });
+  }
+};
+
 // File Management Functions
 async function cleanupOldFiles() {
   try {
@@ -1502,6 +1863,13 @@ async function getStorageUsage() {
 async function initializeApp() {
   initializeNavigation();
   initializeModal();
+  
+  // Initialize image optimization features
+  LazyLoader.init();
+  console.log(`🖼️ 画像最適化機能を初期化:
+    - WebP サポート: ${ImageOptimizer.supportsWebP ? '✅' : '❌'}
+    - AVIF サポート: ${ImageOptimizer.supportsAVIF ? '✅' : '❌'}
+    - 遅延読み込み: ${LazyLoader.imageObserver ? '✅' : '❌'}`);
   
   document.getElementById('add-schedule-btn').addEventListener('click', showScheduleModal);
   document.getElementById('add-handover-btn').addEventListener('click', showHandoverModal);

@@ -107,9 +107,39 @@ const SUPABASE_URL = 'https://fpykdcvcswamsiawtibh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
 ```
 
+## Performance Optimization Features
+
+### Local Storage Cache System
+- **Cache Duration**: departments/priorities (60min), schedules (15min), handovers/tasks (10min)
+- **Auto Cleanup**: Expired cache removal on app startup
+- **Fallback Support**: Offline capability with cached data
+- **Cache Management**: Settings panel with usage display and manual controls
+
+### Image Optimization System
+- **Format Support**: Automatic WebP/AVIF conversion with fallback to JPEG
+- **Automatic Compression**: Client-side image optimization before upload (85% quality)
+- **Lazy Loading**: Intersection Observer for images with blur-to-sharp transition
+- **File Size Reduction**: 50-80% typical compression ratio
+- **Optimization Testing**: Built-in test function in settings
+
+### File Management
+- **Auto Cleanup**: Files older than 1 month are automatically deleted
+- **Storage Monitoring**: Real-time usage tracking with progress bars
+- **Reference Cleanup**: Database cleanup of invalid file references
+- **Manual Controls**: Force cleanup and storage verification
+
+## Configuration Files
+
+### Vercel Optimization (vercel.json)
+- Image optimization with WebP/AVIF support
+- CDN caching headers for static assets
+- Supabase domain whitelist for image optimization
+
 ## Important Implementation Details
 
 - All text is in Japanese - maintain this when making changes
 - Status management uses specific values: 'pending', 'in-progress', 'completed'
-- File uploads are handled asynchronously with proper error handling
+- File uploads include automatic image optimization before Supabase upload
+- Cache keys use 'workplace_cache_' prefix for easy identification
+- Image optimization gracefully degrades if optimization fails
 - The application includes comprehensive error handling with Japanese error messages
