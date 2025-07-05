@@ -183,6 +183,7 @@
   --color-error-rgb: 255, 84, 89;
   --color-warning-rgb: 230, 129, 97;
   --color-info-rgb: 167, 169, 169;
+  }
 }
 
 [data-color-scheme="light"] {
@@ -744,8 +745,8 @@ body {
 }
 
 .nav-link.active {
-  background-color: var(--color-secondary);
-  color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: var(--color-btn-primary-text);
   border-left-color: var(--color-primary);
 }
 
@@ -940,7 +941,7 @@ body {
 
 .handover-item {
   display: flex;
-  align-items: center; /* Changed from flex-start */
+  align-items: flex-start; /* Changed from center */
   flex-wrap: wrap; /* Added to allow wrapping */
   padding: var(--space-16);
   /* Removed padding-bottom: var(--space-32); */
@@ -948,6 +949,13 @@ body {
   border: 1px solid var(--color-card-border);
   margin-bottom: var(--space-12);
   transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.handover-meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-right: var(--space-16);
 }
 
 .handover-actions {
@@ -995,14 +1003,12 @@ body {
 }
 
 .handover-status {
-  margin-left: var(--space-16); /* Add left margin */
+  margin-left: auto; /* Push to the right */
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   color: white;
-  min-width: 80px; /* Ensure minimum width */
-  text-align: center;
 }
 
 .status--pending { background-color: #FFC107; } /* Warning color */
@@ -1313,15 +1319,22 @@ body {
     left: calc(280px + 16px); /* Move button with sidebar */
   }
 
+  /* Specific adjustments for handover icons on mobile */
   .handover-priority {
-    padding: var(--space-4) var(--space-8);
-    min-width: 50px;
+    padding: var(--space-1) var(--space-4); /* Even smaller padding */
+    min-width: 40px; /* Even narrower */
+    font-size: var(--font-size-xs); /* Smaller font size */
   }
 
   .handover-status {
-    padding: var(--space-2) var(--space-6);
-    min-width: 60px;
-    margin-left: var(--space-8);
+    padding: var(--space-1) var(--space-4); /* Even smaller padding */
+    min-width: 50px; /* Even narrower */
+    font-size: var(--font-size-xs); /* Smaller font size */
+    margin-left: 0; /* Ensure no left margin */
+  }
+
+  .handover-actions {
+    margin-top: var(--space-12); /* Adjust margin for better spacing */
   }
 }
 
@@ -1485,7 +1498,7 @@ body {
 }
 
 .handover-item {
-  align-items: center;
+  align-items: flex-start;
 }
 
 .handover-details {
@@ -1527,16 +1540,4 @@ body {
 .task-card[data-completed="true"] .task-description {
   text-decoration: line-through;
   color: var(--color-text-secondary);
-}
-
-.handover-attachment,
-.task-attachment {
-  margin-top: var(--space-8);
-  font-size: var(--font-size-sm);
-}
-
-.handover-attachment a,
-.task-attachment a {
-  color: var(--color-primary);
-  text-decoration: underline;
 }
