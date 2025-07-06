@@ -1928,6 +1928,7 @@ body {
     align-items: center;
     gap: var(--space-8);
     font-size: var(--font-size-sm);
+    flex-shrink: 0; /* 縮小されないようにする */
 }
 
 .task-meta-label,
@@ -2014,18 +2015,13 @@ body {
         flex-direction: column;
     }
     
-    .task-actions {
-        flex-direction: column;
-    }
+    
     
     .task-meta {
         gap: var(--space-8);
     }
     
-    .task-meta-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+    
 }
 
 /* Handover Status Styles */
