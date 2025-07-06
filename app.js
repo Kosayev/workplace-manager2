@@ -897,6 +897,7 @@ function renderHandoverContent() {
       <div class="handover-actions">
         <button class="btn btn--sm btn--primary" onclick="showHandoverStatusModal(${handover.id})" title="ステータス変更">ステータス変更</button>
         <button class="btn btn--sm btn--outline edit-btn" data-id="${handover.id}" title="編集">編集</button>
+        <button class="btn btn--sm btn--danger" onclick="deleteHandover(${handover.id})" title="削除">削除</button>
       </div>
     </div>
   `).join('');
@@ -1316,7 +1317,6 @@ async function showEditHandoverModal(handoverId) {
       <div class="form-group"><label class="form-label">内容</label><textarea class="form-control" name="description" rows="4" required>${handover.description}</textarea></div>
       <div class="modal-buttons">
         <button type="button" class="btn btn--outline" onclick="document.getElementById('modal').classList.remove('active')">キャンセル</button>
-        <button type="button" class="btn btn--danger" onclick="deleteHandover(${handover.id}); document.getElementById('modal').classList.remove('active');">削除</button>
         <button type="submit" class="btn btn--primary">保存</button>
       </div>
     </form>

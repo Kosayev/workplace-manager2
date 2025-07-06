@@ -2080,10 +2080,20 @@ body {
   font-weight: var(--font-weight-medium);
 }
 
-.handover-actions {
+.handover-actions, .task-actions {
   display: flex;
   gap: var(--space-8);
   margin-top: var(--space-12);
+}
+
+.handover-actions {
+  justify-content: space-between;
+}
+
+.handover-actions .btn,
+.task-actions .btn {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Mobile Responsive for Handovers */
@@ -2097,8 +2107,18 @@ body {
     align-items: flex-start;
   }
   
-  .handover-actions {
+  .handover-actions,
+  .task-actions {
     flex-direction: row; /* 横並びにする */
-    justify-content: space-around; /* ボタンを均等に配置 */
+    justify-content: space-between; /* ボタンを均等に配置 */
+    gap: var(--space-6);
+  }
+  
+  .handover-actions .btn,
+  .task-actions .btn {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--font-size-xs);
+    padding: var(--space-6) var(--space-4);
   }
 }
