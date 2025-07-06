@@ -1795,6 +1795,10 @@ async function addSchedule(event) {
 }
 
 async function deleteSchedule(scheduleId) {
+  if (!confirm('このスケジュールを削除しますか？\n削除すると元に戻せません。')) {
+    return;
+  }
+  
   const { error } = await supabase.from('schedules').delete().eq('id', scheduleId);
 
   if (error) {
@@ -1888,6 +1892,10 @@ async function addHandover(event) {
 }
 
 async function deleteHandover(handoverId) {
+  if (!confirm('この申し送り事項を削除しますか？\n削除すると元に戻せません。')) {
+    return;
+  }
+  
   const handover = appData.handovers.find(h => h.id === parseInt(handoverId));
   if (handover && handover.file_url) {
     const fileName = handover.file_url.split('/').pop();
@@ -1988,6 +1996,10 @@ async function addTask(event) {
 }
 
 async function deleteTask(taskId) {
+  if (!confirm('このタスクを削除しますか？\n削除すると元に戻せません。')) {
+    return;
+  }
+  
   const task = appData.tasks.find(t => t.id === parseInt(taskId));
   if (task && task.file_url) {
     const fileName = task.file_url.split('/').pop();
