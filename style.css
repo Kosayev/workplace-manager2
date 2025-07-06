@@ -1930,13 +1930,10 @@ body {
     font-size: var(--font-size-sm);
 }
 
-.task-meta-label {
-    color: var(--color-text-secondary);
-    font-weight: var(--font-weight-medium);
-}
-
-.task-due-date {
-    color: var(--color-text);
+.task-meta-label,
+.task-due-date,
+.task-meta-item span {
+    white-space: nowrap; /* テキストを折り返さない */
 }
 
 
