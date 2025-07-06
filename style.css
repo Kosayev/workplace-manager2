@@ -958,13 +958,7 @@ body {
   min-width: 100px;
 }
 
-.handover-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  flex-shrink: 0;
-  align-self: flex-start;
-}
+
 
 .handover-item:hover {
   box-shadow: var(--shadow-md);
@@ -2104,6 +2098,7 @@ body {
   }
   
   .handover-actions {
-    flex-direction: column;
+    flex-direction: row; /* 横並びにする */
+    justify-content: space-around; /* ボタンを均等に配置 */
   }
 }
