@@ -1950,7 +1950,10 @@ body {
 
 .task-actions {
     display: flex;
+    flex-direction: row; /* 横並びにする */
+    flex-wrap: wrap; /* スマートフォンで折り返す */
     gap: var(--space-8);
+    justify-content: space-around; /* ボタンを均等に配置 */
     margin-top: var(--space-16);
     padding-top: var(--space-12);
     border-top: 1px solid var(--color-border);
